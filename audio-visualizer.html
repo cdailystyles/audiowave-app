@@ -1,0 +1,1662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Real-time audio visualizer with classic Windows Media Player effects. Visualize music from any browser tab with customizable patterns, colors, and effects.">
+    <meta name="keywords" content="audio visualizer, music visualizer, spectrum analyzer, waveform, audio reactive">
+    <title>AUDIOWAVE.APP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0a0f;
+            --bg-panel: rgba(15, 15, 25, 0.85);
+            --accent: #00ffcc;
+            --accent-dim: #00ccaa;
+            --text: #e0e0e8;
+            --text-dim: #e0e0e8;
+            --border: rgba(0, 255, 204, 0.2);
+            --shadow: rgba(0, 255, 204, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-dark);
+            color: var(--text);
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        #visualizer-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            background: linear-gradient(135deg, #0a0a0f 0%, #15151f 100%);
+        }
+
+        #ui-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        #top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            background: linear-gradient(180deg, var(--bg-panel) 0%, transparent 100%);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: all;
+            transition: opacity 0.3s ease;
+        }
+
+        body.hide-ui #top-bar {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .logo {
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            color: var(--accent);
+        }
+
+        #capture-btn {
+            padding: 10px 24px;
+            background: transparent;
+            border: 1.5px solid var(--accent);
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #capture-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: var(--accent);
+            transform: translate(-50%, -50%);
+            transition: width 0.4s ease, height 0.4s ease;
+            z-index: -1;
+        }
+
+        #capture-btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        #capture-btn:hover {
+            color: var(--bg-dark);
+            border-color: var(--accent);
+            box-shadow: 0 0 20px var(--shadow);
+        }
+
+        #capture-btn.active {
+            background: var(--accent);
+            color: var(--bg-dark);
+            border-color: var(--accent);
+        }
+
+        #control-panel {
+            position: absolute;
+            left: 20px;
+            bottom: 80px;
+            background: var(--bg-panel);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            width: 320px;
+            max-height: calc(100vh - 200px);
+            pointer-events: all;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        body.hide-ui #control-panel {
+            width: 44px;
+            height: 44px;
+            padding: 0;
+            grid-template-columns: 1fr;
+            gap: 0;
+            overflow: hidden;
+            cursor: pointer;
+            border-radius: 8px;
+        }
+
+        body.hide-ui #control-panel > *:not(.panel-icon) {
+            display: none;
+        }
+
+        .panel-icon {
+            display: none;
+            width: 44px;
+            height: 44px;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: var(--text);
+            cursor: pointer;
+            grid-column: 1 / -1;
+            margin: 0;
+            padding: 0;
+        }
+
+        body.hide-ui .panel-icon {
+            display: flex;
+        }
+
+        body.hide-ui #control-panel:hover {
+            background: rgba(0, 255, 204, 0.1);
+            border-color: var(--accent);
+            transform: scale(1.05);
+        }
+
+        .control-section {
+            margin-bottom: 0;
+        }
+
+        .control-section.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .control-section.patterns {
+            grid-column: 1 / -1;
+        }
+
+        .control-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .pattern-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+        }
+
+        .pattern-btn {
+            padding: 6px 4px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .pattern-btn:hover {
+            background: rgba(0, 255, 204, 0.1);
+            border-color: var(--border);
+            color: var(--text);
+        }
+
+        .pattern-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: var(--bg-dark);
+            font-weight: 600;
+        }
+
+        .slider-container {
+            margin-bottom: 10px;
+        }
+
+        .slider-container:last-child {
+            margin-bottom: 0;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .slider-label {
+            font-size: 10px;
+            color: var(--text);
+        }
+
+        .slider-value {
+            font-size: 10px;
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 0 10px var(--shadow);
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 15px var(--accent);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 0 10px var(--shadow);
+        }
+
+        input[type="range"]::-moz-range-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 15px var(--accent);
+        }
+
+        .color-picker-container {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .color-option {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .color-option:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .color-option.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 15px var(--accent);
+        }
+
+        .color-option.rainbow {
+            background: linear-gradient(135deg, 
+                #ff0000 0%, 
+                #ff7f00 16.67%, 
+                #ffff00 33.33%, 
+                #00ff00 50%, 
+                #0000ff 66.67%, 
+                #4b0082 83.33%, 
+                #9400d3 100%
+            );
+        }
+
+        .color-mode-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .color-mode-btn {
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .color-mode-btn:hover {
+            background: rgba(0, 255, 204, 0.1);
+            border-color: var(--border);
+        }
+
+        .color-mode-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: var(--bg-dark);
+            font-weight: 600;
+        }
+
+        #status-bar {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            background: var(--bg-panel);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 11px;
+            color: var(--text-dim);
+            pointer-events: all;
+            transition: opacity 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        body.hide-ui #status-bar {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-dim);
+        }
+
+        .status-indicator.active {
+            background: var(--accent);
+            box-shadow: 0 0 10px var(--accent);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        #fullscreen-toggle {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 44px;
+            height: 44px;
+            background: var(--bg-panel);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            pointer-events: all;
+            color: var(--text-dim);
+        }
+
+        body.hide-ui #fullscreen-toggle {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #fullscreen-toggle:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: var(--bg-dark);
+            box-shadow: 0 0 20px var(--shadow);
+        }
+
+        @media (max-width: 768px) {
+            #control-panel {
+                left: 50%;
+                bottom: 80px;
+                transform: translateX(-50%);
+                width: calc(100% - 40px);
+                max-width: 340px;
+            }
+
+            body.hide-ui #control-panel {
+                transform: translateX(-50%) translateY(20px);
+            }
+
+            .pattern-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .hide-ui-btn {
+            grid-column: 1 / -1;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .hide-ui-btn:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: var(--bg-dark);
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container">
+        <canvas id="visualizer-canvas"></canvas>
+    </div>
+
+    <div id="ui-overlay">
+        <div id="top-bar">
+            <div class="logo">AUDIOWAVE.APP</div>
+            <button id="capture-btn">Start Audio</button>
+        </div>
+
+        <div id="control-panel">
+            <div class="panel-icon">⚙</div>
+            
+            <div class="control-section patterns">
+                <div class="control-label">Pattern</div>
+                <div class="pattern-grid">
+                    <button class="pattern-btn active" data-pattern="bars">Bars</button>
+                    <button class="pattern-btn" data-pattern="wave">Wave</button>
+                    <button class="pattern-btn" data-pattern="circular">Circular</button>
+                    <button class="pattern-btn" data-pattern="spectrum">Spectrum</button>
+                    <button class="pattern-btn" data-pattern="radial">Radial</button>
+                    <button class="pattern-btn" data-pattern="particles">Particles</button>
+                    <button class="pattern-btn" data-pattern="rings">Rings</button>
+                    <button class="pattern-btn" data-pattern="dna">DNA</button>
+                    <button class="pattern-btn" data-pattern="spiral">Spiral</button>
+                    <button class="pattern-btn" data-pattern="grid">Grid</button>
+                    <button class="pattern-btn" data-pattern="tunnel">Tunnel</button>
+                    <button class="pattern-btn" data-pattern="plasma">Plasma</button>
+                    <button class="pattern-btn" data-pattern="fractal">Fractal</button>
+                    <button class="pattern-btn" data-pattern="mandala">Mandala</button>
+                    <button class="pattern-btn" data-pattern="galaxy">Galaxy</button>
+                    <button class="pattern-btn" data-pattern="vortex">Vortex</button>
+                    <button class="pattern-btn" data-pattern="kaleidoscope">Kaleido</button>
+                    <button class="pattern-btn" data-pattern="matrix">Matrix</button>
+                    <button class="pattern-btn" data-pattern="nebula">Nebula</button>
+                    <button class="pattern-btn" data-pattern="helix">Helix</button>
+                    <button class="pattern-btn" data-pattern="petals">Petals</button>
+                    <button class="pattern-btn" data-pattern="crystals">Crystals</button>
+                    <button class="pattern-btn" data-pattern="fireworks">Fireworks</button>
+                    <button class="pattern-btn" data-pattern="lightning">Lightning</button>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <div class="slider-container">
+                    <div class="slider-header">
+                        <span class="slider-label">Amplitude</span>
+                        <span class="slider-value" id="amplitude-value">1.0</span>
+                    </div>
+                    <input type="range" id="amplitude-slider" min="0.1" max="3" step="0.1" value="1">
+                </div>
+
+                <div class="slider-container">
+                    <div class="slider-header">
+                        <span class="slider-label">Smoothing</span>
+                        <span class="slider-value" id="smoothing-value">0.8</span>
+                    </div>
+                    <input type="range" id="smoothing-slider" min="0" max="0.95" step="0.05" value="0.8">
+                </div>
+            </div>
+
+            <div class="control-section">
+                <div class="slider-container">
+                    <div class="slider-header">
+                        <span class="slider-label">Speed</span>
+                        <span class="slider-value" id="speed-value">1.0</span>
+                    </div>
+                    <input type="range" id="speed-slider" min="0.1" max="3" step="0.1" value="1">
+                </div>
+
+                <div class="slider-container">
+                    <div class="slider-header">
+                        <span class="slider-label">Glow</span>
+                        <span class="slider-value" id="glow-value">20</span>
+                    </div>
+                    <input type="range" id="glow-slider" min="0" max="50" step="5" value="20">
+                </div>
+            </div>
+
+            <div class="control-section full-width">
+                <div class="control-label">Color Mode</div>
+                <div class="color-mode-buttons">
+                    <button class="color-mode-btn active" data-mode="rainbow">Rainbow</button>
+                    <button class="color-mode-btn" data-mode="single">Single Hue</button>
+                </div>
+                <div class="slider-container">
+                    <div class="slider-header">
+                        <span class="slider-label">Hue Shift</span>
+                        <span class="slider-value" id="hue-shift-value">0</span>
+                    </div>
+                    <input type="range" id="hue-shift-slider" min="0" max="360" step="1" value="0">
+                </div>
+            </div>
+
+            <button class="hide-ui-btn" id="toggle-ui">Hide Controls</button>
+        </div>
+
+        <div id="status-bar">
+            <div class="status-indicator" id="status-indicator"></div>
+            <span id="status-text">Ready - Click "Start Audio" to begin</span>
+        </div>
+
+        <button id="fullscreen-toggle" title="Toggle Fullscreen">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+            </svg>
+        </button>
+    </div>
+
+    <script>
+        // Configuration
+        const config = {
+            pattern: 'bars',
+            colorMode: 'rainbow',
+            hueShift: 0,
+            amplitude: 1.0,
+            smoothing: 0.8,
+            speed: 1.0,
+            glow: 20
+        };
+
+        // Canvas setup
+        const canvas = document.getElementById('visualizer-canvas');
+        const ctx = canvas.getContext('2d', { alpha: false });
+        let width, height;
+
+        function resizeCanvas() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Audio setup
+        let audioContext, analyser, dataArray, bufferLength;
+        let mediaStream = null;
+        let animationId = null;
+        let hue = 0;
+        let time = 0;
+
+        // UI Elements
+        const captureBtn = document.getElementById('capture-btn');
+        const statusIndicator = document.getElementById('status-indicator');
+        const statusText = document.getElementById('status-text');
+        const fullscreenToggle = document.getElementById('fullscreen-toggle');
+        const toggleUiBtn = document.getElementById('toggle-ui');
+        const patternBtns = document.querySelectorAll('.pattern-btn');
+
+        // Sliders
+        const amplitudeSlider = document.getElementById('amplitude-slider');
+        const smoothingSlider = document.getElementById('smoothing-slider');
+        const speedSlider = document.getElementById('speed-slider');
+        const glowSlider = document.getElementById('glow-slider');
+        const hueShiftSlider = document.getElementById('hue-shift-slider');
+        const colorModeBtns = document.querySelectorAll('.color-mode-btn');
+
+        // Update slider values
+        amplitudeSlider.addEventListener('input', (e) => {
+            config.amplitude = parseFloat(e.target.value);
+            document.getElementById('amplitude-value').textContent = config.amplitude.toFixed(1);
+        });
+
+        smoothingSlider.addEventListener('input', (e) => {
+            config.smoothing = parseFloat(e.target.value);
+            document.getElementById('smoothing-value').textContent = config.smoothing.toFixed(2);
+            if (analyser) analyser.smoothingTimeConstant = config.smoothing;
+        });
+
+        speedSlider.addEventListener('input', (e) => {
+            config.speed = parseFloat(e.target.value);
+            document.getElementById('speed-value').textContent = config.speed.toFixed(1);
+        });
+
+        glowSlider.addEventListener('input', (e) => {
+            config.glow = parseInt(e.target.value);
+            document.getElementById('glow-value').textContent = config.glow;
+        });
+
+        hueShiftSlider.addEventListener('input', (e) => {
+            config.hueShift = parseInt(e.target.value);
+            document.getElementById('hue-shift-value').textContent = config.hueShift;
+        });
+
+        // Color mode selection
+        colorModeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                colorModeBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                config.colorMode = btn.dataset.mode;
+            });
+        });
+
+        // Pattern selection
+        patternBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                patternBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                config.pattern = btn.dataset.pattern;
+            });
+        });
+
+        // Audio capture
+        captureBtn.addEventListener('click', async () => {
+            if (mediaStream) {
+                stopVisualization();
+                return;
+            }
+
+            try {
+                statusText.textContent = 'Select a tab with audio...';
+                
+                mediaStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: true,
+                    audio: {
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false
+                    }
+                });
+
+                // Stop video track immediately
+                mediaStream.getVideoTracks().forEach(track => track.stop());
+
+                const audioTracks = mediaStream.getAudioTracks();
+                if (audioTracks.length === 0) {
+                    throw new Error('No audio track found. Make sure to check "Share audio"');
+                }
+
+                // Setup audio context
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioContext.createMediaStreamSource(mediaStream);
+                
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 2048;
+                analyser.smoothingTimeConstant = config.smoothing;
+                
+                bufferLength = analyser.frequencyBinCount;
+                dataArray = new Uint8Array(bufferLength);
+                
+                source.connect(analyser);
+                
+                captureBtn.textContent = 'Stop';
+                captureBtn.classList.add('active');
+                statusIndicator.classList.add('active');
+                statusText.textContent = 'Visualizing Audio';
+                
+                visualize();
+            } catch (err) {
+                statusText.textContent = 'Error: ' + err.message;
+                console.error('Audio capture error:', err);
+            }
+        });
+
+        function stopVisualization() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream = null;
+            }
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+            
+            captureBtn.textContent = 'Start Audio';
+            captureBtn.classList.remove('active');
+            statusIndicator.classList.remove('active');
+            statusText.textContent = 'Stopped';
+            
+            ctx.fillStyle = '#0a0a0f';
+            ctx.fillRect(0, 0, width, height);
+        }
+
+        // Fullscreen toggle
+        fullscreenToggle.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        // UI toggle
+        toggleUiBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent triggering panel click
+            document.body.classList.toggle('hide-ui');
+        });
+
+        // Control panel click to expand when collapsed
+        const controlPanel = document.getElementById('control-panel');
+        controlPanel.addEventListener('click', (e) => {
+            if (document.body.classList.contains('hide-ui')) {
+                document.body.classList.remove('hide-ui');
+            }
+        });
+
+        // Color functions
+        function getColor(index, total) {
+            if (config.colorMode === 'rainbow') {
+                const baseHue = (hue + (index / total) * 360 + config.hueShift) % 360;
+                return `hsl(${baseHue}, 100%, 60%)`;
+            } else if (config.colorMode === 'single') {
+                return `hsl(${config.hueShift}, 100%, 60%)`;
+            }
+        }
+
+        // Visualization loop
+        function visualize() {
+            animationId = requestAnimationFrame(visualize);
+            
+            analyser.getByteFrequencyData(dataArray);
+            
+            time += 0.016 * config.speed;
+            hue = (hue + 0.5 * config.speed) % 360;
+            
+            // Call pattern function
+            const patterns = {
+                bars: drawBars,
+                wave: drawWave,
+                circular: drawCircular,
+                spectrum: drawSpectrum,
+                radial: drawRadial,
+                particles: drawParticles,
+                rings: drawRings,
+                dna: drawDNA,
+                spiral: drawSpiral,
+                grid: drawGrid,
+                tunnel: drawTunnel,
+                plasma: drawPlasma,
+                fractal: drawFractal,
+                mandala: drawMandala,
+                galaxy: drawGalaxy,
+                vortex: drawVortex,
+                kaleidoscope: drawKaleidoscope,
+                matrix: drawMatrix,
+                nebula: drawNebula,
+                helix: drawHelix,
+                petals: drawPetals,
+                crystals: drawCrystals,
+                fireworks: drawFireworks,
+                lightning: drawLightning
+            };
+            
+            patterns[config.pattern]();
+        }
+
+        // Pattern functions
+        function drawBars() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.2)';
+            ctx.fillRect(0, 0, width, height);
+            
+            const barWidth = (width / bufferLength) * 2.5;
+            let x = 0;
+            
+            for (let i = 0; i < bufferLength; i++) {
+                const barHeight = (dataArray[i] / 255) * height * config.amplitude * 0.8;
+                
+                const color = getColor(i, bufferLength);
+                ctx.fillStyle = color;
+                ctx.shadowBlur = config.glow;
+                ctx.shadowColor = color;
+                
+                ctx.fillRect(x, height - barHeight, barWidth - 2, barHeight);
+                
+                x += barWidth;
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function drawWave() {
+            analyser.getByteTimeDomainData(dataArray);
+            
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.15)';
+            ctx.fillRect(0, 0, width, height);
+            
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = config.glow;
+            
+            for (let layer = 0; layer < 3; layer++) {
+                const color = getColor(layer * 100, 300);
+                ctx.strokeStyle = color;
+                ctx.shadowColor = color;
+                
+                ctx.beginPath();
+                const sliceWidth = width / bufferLength;
+                let x = 0;
+                
+                for (let i = 0; i < bufferLength; i++) {
+                    const v = dataArray[i] / 128.0;
+                    const y = (v * height / 2) + (layer * 40 - 40);
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                    x += sliceWidth;
+                }
+                ctx.stroke();
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function drawCircular() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+            
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const radius = Math.min(width, height) / 4;
+            
+            ctx.shadowBlur = config.glow;
+            
+            for (let i = 0; i < bufferLength; i++) {
+                const angle = (i / bufferLength) * Math.PI * 2;
+                const amp = (dataArray[i] / 255) * radius * config.amplitude;
+                
+                const x = centerX + Math.cos(angle) * (radius + amp);
+                const y = centerY + Math.sin(angle) * (radius + amp);
+                
+                const color = getColor(i, bufferLength);
+                ctx.fillStyle = color;
+                ctx.shadowColor = color;
+                
+                ctx.beginPath();
+                ctx.arc(x, y, 2 + amp / 20, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function drawSpectrum() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.2)';
+            ctx.fillRect(0, 0, width, height);
+            
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const maxRadius = Math.min(width, height) / 2.5;
+            
+            ctx.lineWidth = 2;
+            ctx.shadowBlur = config.glow;
+            
+            for (let i = 0; i < bufferLength; i += 2) {
+                const angle = (i / bufferLength) * Math.PI * 2;
+                const barHeight = (dataArray[i] / 255) * maxRadius * config.amplitude;
+                
+                const x1 = centerX + Math.cos(angle) * (maxRadius * 0.3);
+                const y1 = centerY + Math.sin(angle) * (maxRadius * 0.3);
+                const x2 = centerX + Math.cos(angle) * (maxRadius * 0.3 + barHeight);
+                const y2 = centerY + Math.sin(angle) * (maxRadius * 0.3 + barHeight);
+                
+                const color = getColor(i, bufferLength);
+                ctx.strokeStyle = color;
+                ctx.shadowColor = color;
+                
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function drawRadial() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.15)';
+            ctx.fillRect(0, 0, width, height);
+            
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const numRings = 8;
+            
+            ctx.shadowBlur = config.glow;
+            
+            for (let ring = 0; ring < numRings; ring++) {
+                const baseRadius = (ring + 1) * 30;
+                const color = getColor(ring * 30, numRings * 30);
+                ctx.strokeStyle = color;
+                ctx.shadowColor = color;
+                ctx.lineWidth = 2;
+                
+                ctx.beginPath();
+                for (let i = 0; i <= bufferLength; i += 4) {
+                    const angle = (i / bufferLength) * Math.PI * 2;
+                    const amp = (dataArray[i] / 255) * 50 * config.amplitude;
+                    const radius = baseRadius + amp;
+                    
+                    const x = centerX + Math.cos(angle) * radius;
+                    const y = centerY + Math.sin(angle) * radius;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.closePath();
+                ctx.stroke();
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function drawParticles() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.08)';
+            ctx.fillRect(0, 0, width, height);
+            
+            ctx.shadowBlur = config.glow;
+            
+            for (let i = 0; i < bufferLength; i += 3) {
+                const x = (i / bufferLength) * width;
+                const y = height / 2 + Math.sin(i * 0.1 + time) * 100;
+                const size = (dataArray[i] / 255) * 20 * config.amplitude;
+                
+                const color = getColor(i, bufferLength);
+                ctx.fillStyle = color;
+                ctx.shadowColor = color;
+                
+                ctx.beginPath();
+                ctx.arc(x, y, size / 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function drawRings() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.12)';
+            ctx.fillRect(0, 0, width, height);
+            
+            const centerX = width / 2;
+            const centerY = height / 2;
+            
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = config.glow;
+            
+            for (let i = 0; i < bufferLength; i += 8) {
+                const radius = (dataArray[i] / 255) * Math.min(width, height) * 0.4 * config.amplitude;
+                
+                const color = getColor(i, bufferLength);
+                ctx.strokeStyle = color;
+                ctx.shadowColor = color;
+                
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function drawDNA() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.15)';
+            ctx.fillRect(0, 0, width, height);
+            
+            ctx.lineWidth = 2;
+            ctx.shadowBlur = config.glow;
+            
+            for (let strand = 0; strand < 2; strand++) {
+                const offset = strand * Math.PI;
+                
+                ctx.beginPath();
+                for (let i = 0; i < bufferLength; i += 2) {
+                    const x = (i / bufferLength) * width;
+                    const amp = (dataArray[i] / 255) * 100 * config.amplitude;
+                    const y = height / 2 + Math.sin(i * 0.05 + time + offset) * amp;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                
+                const color = getColor(strand * 150, 300);
+                ctx.strokeStyle = color;
+                ctx.shadowColor = color;
+                ctx.stroke();
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function drawSpiral() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+            
+            const centerX = width / 2;
+            const centerY = height / 2;
+            
+            ctx.lineWidth = 2;
+            ctx.shadowBlur = config.glow;
+            
+            ctx.beginPath();
+            for (let i = 0; i < bufferLength; i++) {
+                const angle = (i / bufferLength) * Math.PI * 8 + time;
+                const radius = (i / bufferLength) * Math.min(width, height) / 2;
+                const amp = (dataArray[i] / 255) * 50 * config.amplitude;
+                
+                const x = centerX + Math.cos(angle) * (radius + amp);
+                const y = centerY + Math.sin(angle) * (radius + amp);
+                
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            
+            const color = getColor(0, 1);
+            ctx.strokeStyle = color;
+            ctx.shadowColor = color;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+
+        function drawGrid() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.2)';
+            ctx.fillRect(0, 0, width, height);
+            
+            const cols = 20;
+            const rows = 15;
+            const cellWidth = width / cols;
+            const cellHeight = height / rows;
+            
+            ctx.shadowBlur = config.glow;
+            
+            for (let i = 0; i < cols * rows; i++) {
+                const col = i % cols;
+                const row = Math.floor(i / cols);
+                const dataIndex = Math.floor((i / (cols * rows)) * bufferLength);
+                
+                const x = col * cellWidth;
+                const y = row * cellHeight;
+                const brightness = (dataArray[dataIndex] / 255) * config.amplitude;
+                
+                const color = getColor(i, cols * rows);
+                ctx.fillStyle = color;
+                ctx.shadowColor = color;
+                ctx.globalAlpha = brightness;
+                
+                ctx.fillRect(x + 2, y + 2, cellWidth - 4, cellHeight - 4);
+            }
+            
+            ctx.globalAlpha = 1;
+            ctx.shadowBlur = 0;
+        }
+
+        function drawTunnel() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.15)';
+            ctx.fillRect(0, 0, width, height);
+            
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const numLayers = 15;
+            
+            ctx.shadowBlur = config.glow;
+            
+            for (let layer = numLayers; layer > 0; layer--) {
+                const layerSize = (layer / numLayers) * Math.min(width, height) / 2;
+                const dataIndex = Math.floor((layer / numLayers) * bufferLength);
+                const amp = (dataArray[dataIndex] / 255) * 50 * config.amplitude;
+                
+                const color = getColor(layer * 20, numLayers * 20);
+                ctx.strokeStyle = color;
+                ctx.shadowColor = color;
+                ctx.lineWidth = 3;
+                
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, layerSize + amp, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function drawPlasma() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.05)';
+            ctx.fillRect(0, 0, width, height);
+            
+            const avgFreq = dataArray.reduce((a, b) => a + b) / bufferLength;
+            const intensity = (avgFreq / 255) * config.amplitude;
+            
+            for (let y = 0; y < height; y += 8) {
+                for (let x = 0; x < width; x += 8) {
+                    const value1 = Math.sin(x * 0.01 + time);
+                    const value2 = Math.sin(y * 0.01 + time);
+                    const value3 = Math.sin((x + y) * 0.01 + time);
+                    const value4 = Math.sin(Math.sqrt(x * x + y * y) * 0.01 + time);
+                    
+                    const plasma = (value1 + value2 + value3 + value4) / 4;
+                    const colorValue = ((plasma + 1) / 2) * 360;
+                    
+                    const color = `hsla(${(colorValue + hue) % 360}, 100%, ${50 + intensity * 30}%, ${0.3 + intensity * 0.5})`;
+                    ctx.fillStyle = color;
+                    ctx.fillRect(x, y, 8, 8);
+                }
+            }
+        }
+
+        function drawFractal() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+            
+            const centerX = width / 2;
+            const centerY = height / 2;
+            
+            ctx.shadowBlur = config.glow;
+            
+            for (let iteration = 0; iteration < 5; iteration++) {
+                const scale = Math.pow(0.6, iteration);
+                const rotation = time * (iteration + 1) * 0.2;
+                
+                for (let i = 0; i < bufferLength; i += 4) {
+                    const angle = (i / bufferLength) * Math.PI * 2 + rotation;
+                    const radius = (dataArray[i] / 255) * 200 * scale * config.amplitude;
+                    
+                    const x = centerX + Math.cos(angle) * radius;
+                    const y = centerY + Math.sin(angle) * radius;
+                    
+                    const color = getColor(i + iteration * 50, bufferLength);
+                    ctx.fillStyle = color;
+                    ctx.shadowColor = color;
+                    
+                    ctx.beginPath();
+                    ctx.arc(x, y, 3 * scale, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function drawMandala() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.12)';
+            ctx.fillRect(0, 0, width, height);
+            
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const petals = 12;
+            
+            ctx.shadowBlur = config.glow;
+            
+            for (let petal = 0; petal < petals; petal++) {
+                const petalAngle = (petal / petals) * Math.PI * 2;
+                
+                ctx.beginPath();
+                for (let i = 0; i < bufferLength; i += 3) {
+                    const t = i / bufferLength;
+                    const angle = petalAngle + Math.sin(t * Math.PI * 4 + time) * 0.5;
+                    const radius = (dataArray[i] / 255) * 150 * config.amplitude * (1 - t * 0.5);
+                    
+                    const x = centerX + Math.cos(angle) * radius;
+                    const y = centerY + Math.sin(angle) * radius;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                
+                const color = getColor(petal * 30, petals * 30);
+                ctx.strokeStyle = color;
+                ctx.shadowColor = color;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function drawGalaxy() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.08)';
+            ctx.fillRect(0, 0, width, height);
+            
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const arms = 4;
+            
+            ctx.shadowBlur = config.glow;
+            
+            for (let arm = 0; arm < arms; arm++) {
+                const armAngle = (arm / arms) * Math.PI * 2;
+                
+                for (let i = 0; i < bufferLength; i += 2) {
+                    const t = i / bufferLength;
+                    const spiralAngle = armAngle + t * Math.PI * 4 + time * 0.5;
+                    const radius = t * Math.min(width, height) * 0.4;
+                    const amp = (dataArray[i] / 255) * 50 * config.amplitude;
+                    
+                    const x = centerX + Math.cos(spiralAngle) * (radius + amp);
+                    const y = centerY + Math.sin(spiralAngle) * (radius + amp);
+                    
+                    const color = getColor(i, bufferLength);
+                    ctx.fillStyle = color;
+                    ctx.shadowColor = color;
+                    
+                    const size = (dataArray[i] / 255) * 4 * config.amplitude;
+                    ctx.beginPath();
+                    ctx.arc(x, y, size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function drawVortex() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.15)';
+            ctx.fillRect(0, 0, width, height);
+            
+            const centerX = width / 2;
+            const centerY = height / 2;
+            
+            ctx.lineWidth = 2;
+            ctx.shadowBlur = config.glow;
+            
+            for (let layer = 0; layer < 20; layer++) {
+                ctx.beginPath();
+                
+                for (let i = 0; i < bufferLength; i += 3) {
+                    const angle = (i / bufferLength) * Math.PI * 2 + time + layer * 0.3;
+                    const radiusBase = (layer / 20) * Math.min(width, height) * 0.4;
+                    const amp = (dataArray[i] / 255) * 30 * config.amplitude;
+                    const radius = radiusBase + amp;
+                    
+                    const x = centerX + Math.cos(angle) * radius;
+                    const y = centerY + Math.sin(angle) * radius;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                
+                ctx.closePath();
+                const color = getColor(layer * 15, 300);
+                ctx.strokeStyle = color;
+                ctx.shadowColor = color;
+                ctx.stroke();
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function drawKaleidoscope() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+            
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const segments = 8;
+            
+            ctx.shadowBlur = config.glow;
+            
+            for (let segment = 0; segment < segments; segment++) {
+                const segmentAngle = (segment / segments) * Math.PI * 2;
+                
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(segmentAngle);
+                
+                for (let i = 0; i < bufferLength; i += 4) {
+                    const x = (i / bufferLength) * 200;
+                    const y = Math.sin(i * 0.1 + time) * (dataArray[i] / 255) * 100 * config.amplitude;
+                    
+                    const color = getColor(i, bufferLength);
+                    ctx.fillStyle = color;
+                    ctx.shadowColor = color;
+                    
+                    ctx.beginPath();
+                    ctx.arc(x, y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Mirror
+                    ctx.beginPath();
+                    ctx.arc(x, -y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                ctx.restore();
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.25)';
+            ctx.fillRect(0, 0, width, height);
+            
+            const cols = 40;
+            const colWidth = width / cols;
+            
+            ctx.shadowBlur = config.glow;
+            ctx.font = '14px JetBrains Mono';
+            
+            for (let col = 0; col < cols; col++) {
+                const dataIndex = Math.floor((col / cols) * bufferLength);
+                const amp = (dataArray[dataIndex] / 255) * config.amplitude;
+                const dropHeight = amp * height;
+                
+                for (let i = 0; i < dropHeight; i += 20) {
+                    const char = String.fromCharCode(0x30A0 + Math.random() * 96);
+                    const x = col * colWidth;
+                    const y = (i + time * 50) % height;
+                    
+                    const opacity = 1 - (i / dropHeight);
+                    const color = getColor(col, cols);
+                    ctx.fillStyle = color.replace('60%)', `60%, ${opacity})`);
+                    ctx.shadowColor = color;
+                    
+                    ctx.fillText(char, x, y);
+                }
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function drawNebula() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.06)';
+            ctx.fillRect(0, 0, width, height);
+            
+            const centerX = width / 2;
+            const centerY = height / 2;
+            
+            ctx.shadowBlur = config.glow * 2;
+            
+            for (let i = 0; i < bufferLength; i += 2) {
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * Math.min(width, height) / 2;
+                const amp = (dataArray[i] / 255) * config.amplitude;
+                
+                const x = centerX + Math.cos(angle) * distance;
+                const y = centerY + Math.sin(angle) * distance;
+                
+                const size = amp * 15;
+                const color = getColor(i, bufferLength);
+                
+                const gradient = ctx.createRadialGradient(x, y, 0, x, y, size);
+                gradient.addColorStop(0, color);
+                gradient.addColorStop(1, 'transparent');
+                
+                ctx.fillStyle = gradient;
+                ctx.shadowColor = color;
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function drawHelix() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.12)';
+            ctx.fillRect(0, 0, width, height);
+            
+            ctx.shadowBlur = config.glow;
+            
+            for (let strand = 0; strand < 3; strand++) {
+                const offset = (strand / 3) * Math.PI * 2;
+                
+                ctx.beginPath();
+                for (let i = 0; i < bufferLength; i += 2) {
+                    const t = i / bufferLength;
+                    const x = t * width;
+                    const angle = t * Math.PI * 6 + time + offset;
+                    const amp = (dataArray[i] / 255) * 80 * config.amplitude;
+                    const y = height / 2 + Math.sin(angle) * amp + Math.cos(t * Math.PI * 2) * 50;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                
+                const color = getColor(strand * 100, 300);
+                ctx.strokeStyle = color;
+                ctx.shadowColor = color;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function drawPetals() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+            
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const numPetals = 16;
+            
+            ctx.shadowBlur = config.glow;
+            
+            for (let petal = 0; petal < numPetals; petal++) {
+                const petalAngle = (petal / numPetals) * Math.PI * 2 + time * 0.5;
+                const dataIndex = Math.floor((petal / numPetals) * bufferLength);
+                const amp = (dataArray[dataIndex] / 255) * config.amplitude;
+                
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(petalAngle);
+                
+                const petalLength = 100 + amp * 100;
+                const petalWidth = 30 + amp * 20;
+                
+                const color = getColor(petal, numPetals);
+                ctx.fillStyle = color;
+                ctx.shadowColor = color;
+                
+                ctx.beginPath();
+                ctx.ellipse(petalLength / 2, 0, petalLength / 2, petalWidth / 2, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function drawCrystals() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.15)';
+            ctx.fillRect(0, 0, width, height);
+            
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const crystalCount = 12;
+            
+            ctx.shadowBlur = config.glow;
+            ctx.lineWidth = 2;
+            
+            for (let i = 0; i < crystalCount; i++) {
+                const angle = (i / crystalCount) * Math.PI * 2 + time * 0.3;
+                const dataIndex = Math.floor((i / crystalCount) * bufferLength);
+                const amp = (dataArray[dataIndex] / 255) * config.amplitude;
+                
+                const distance = 100 + amp * 150;
+                const x = centerX + Math.cos(angle) * distance;
+                const y = centerY + Math.sin(angle) * distance;
+                
+                const size = 20 + amp * 30;
+                const color = getColor(i, crystalCount);
+                ctx.strokeStyle = color;
+                ctx.shadowColor = color;
+                
+                // Draw crystal shape
+                ctx.beginPath();
+                for (let vertex = 0; vertex < 6; vertex++) {
+                    const vertexAngle = (vertex / 6) * Math.PI * 2;
+                    const vx = x + Math.cos(vertexAngle) * size;
+                    const vy = y + Math.sin(vertexAngle) * size;
+                    
+                    if (vertex === 0) {
+                        ctx.moveTo(vx, vy);
+                    } else {
+                        ctx.lineTo(vx, vy);
+                    }
+                }
+                ctx.closePath();
+                ctx.stroke();
+                
+                // Center lines
+                for (let vertex = 0; vertex < 6; vertex++) {
+                    const vertexAngle = (vertex / 6) * Math.PI * 2;
+                    const vx = x + Math.cos(vertexAngle) * size;
+                    const vy = y + Math.sin(vertexAngle) * size;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(vx, vy);
+                    ctx.stroke();
+                }
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function drawFireworks() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+            
+            ctx.shadowBlur = config.glow;
+            
+            for (let i = 0; i < bufferLength; i += 8) {
+                const amp = (dataArray[i] / 255) * config.amplitude;
+                
+                if (amp > 0.5) {
+                    const x = Math.random() * width;
+                    const y = Math.random() * height;
+                    const particles = 20;
+                    
+                    const color = getColor(i, bufferLength);
+                    ctx.fillStyle = color;
+                    ctx.shadowColor = color;
+                    
+                    for (let p = 0; p < particles; p++) {
+                        const particleAngle = (p / particles) * Math.PI * 2;
+                        const distance = amp * 50;
+                        const px = x + Math.cos(particleAngle) * distance;
+                        const py = y + Math.sin(particleAngle) * distance;
+                        
+                        ctx.beginPath();
+                        ctx.arc(px, py, 2, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Trail
+                        ctx.beginPath();
+                        ctx.moveTo(x, y);
+                        ctx.lineTo(px, py);
+                        ctx.strokeStyle = color;
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    }
+                }
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function drawLightning() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.2)';
+            ctx.fillRect(0, 0, width, height);
+            
+            ctx.shadowBlur = config.glow * 1.5;
+            ctx.lineWidth = 3;
+            
+            for (let bolt = 0; bolt < 5; bolt++) {
+                const dataIndex = Math.floor((bolt / 5) * bufferLength);
+                const amp = (dataArray[dataIndex] / 255) * config.amplitude;
+                
+                if (amp > 0.3) {
+                    const startX = (bolt / 5) * width + width / 10;
+                    let currentX = startX;
+                    let currentY = 0;
+                    
+                    const color = getColor(bolt * 50, 250);
+                    ctx.strokeStyle = color;
+                    ctx.shadowColor = color;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(currentX, currentY);
+                    
+                    const segments = 15;
+                    for (let seg = 0; seg < segments; seg++) {
+                        currentX += (Math.random() - 0.5) * 60 * amp;
+                        currentY += (height / segments) + (Math.random() - 0.5) * 20;
+                        ctx.lineTo(currentX, currentY);
+                        
+                        // Branches
+                        if (Math.random() > 0.7) {
+                            const branchX = currentX + (Math.random() - 0.5) * 40 * amp;
+                            const branchY = currentY + 30;
+                            ctx.moveTo(currentX, currentY);
+                            ctx.lineTo(branchX, branchY);
+                            ctx.moveTo(currentX, currentY);
+                        }
+                    }
+                    ctx.stroke();
+                }
+            }
+            ctx.shadowBlur = 0;
+        }
+    </script>
+</body>
+</html>
