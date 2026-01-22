@@ -1249,7 +1249,7 @@
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 24px;
-            width: 400px;
+            width: 480px;
             max-width: calc(100% - 40px);
             max-height: calc(100vh - 80px);
             overflow-y: auto;
@@ -1347,10 +1347,75 @@
             transition: all 0.2s ease;
         }
 
-        .location-tag:hover {
+        .location-tag:hover, .genre-tag:hover {
             background: var(--accent);
             border-color: var(--accent);
             color: var(--bg-dark);
+        }
+
+        .browse-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+        }
+
+        .browse-tab {
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-dim);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .browse-tab:hover {
+            border-color: var(--accent);
+            color: var(--text);
+        }
+
+        .browse-tab.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: var(--bg-dark);
+        }
+
+        .browse-panel {
+            display: none;
+        }
+
+        .browse-panel.active {
+            display: block;
+        }
+
+        .region-section {
+            margin-bottom: 16px;
+        }
+
+        .region-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .genre-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .genre-tag {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s ease;
         }
 
         /* Mobile adjustments for radio */
@@ -1407,7 +1472,7 @@
 
             <div class="radio-location">
                 <span id="location-display">Detecting location...</span>
-                <button id="change-location" class="location-btn" aria-label="Change location">Change</button>
+                <button id="change-location" class="location-btn" aria-label="Browse stations">Browse</button>
             </div>
 
             <div class="radio-dial">
@@ -1446,7 +1511,7 @@
 
             <div class="station-list-section">
                 <div class="station-list-header">
-                    <span>Nearby Stations</span>
+                    <span id="station-list-title">Stations</span>
                     <button id="refresh-stations" class="refresh-btn" aria-label="Refresh stations">↻</button>
                 </div>
                 <div id="station-list" class="station-list"></div>
@@ -1461,24 +1526,89 @@
             </div>
         </div>
 
-        <!-- Location Selector Modal -->
+        <!-- Station Browser Modal -->
         <div id="location-modal" class="location-modal" aria-hidden="true">
             <div class="location-content">
                 <button class="location-close" id="location-close" aria-label="Close">&times;</button>
-                <h3>Select Location</h3>
-                <div class="location-search">
-                    <input type="text" id="location-search" placeholder="Search city or country..." aria-label="Search location">
+                <h3>Browse Stations</h3>
+
+                <div class="browse-tabs">
+                    <button class="browse-tab active" data-tab="regions">By Region</button>
+                    <button class="browse-tab" data-tab="genres">By Genre</button>
                 </div>
-                <div class="location-suggestions" id="location-suggestions"></div>
-                <div class="popular-locations">
-                    <div class="control-label">Popular</div>
-                    <div class="location-tags">
-                        <button class="location-tag" data-country="US" data-state="California">California, US</button>
-                        <button class="location-tag" data-country="US" data-state="New York">New York, US</button>
-                        <button class="location-tag" data-country="GB">United Kingdom</button>
-                        <button class="location-tag" data-country="DE">Germany</button>
-                        <button class="location-tag" data-country="JP">Japan</button>
-                        <button class="location-tag" data-country="AU">Australia</button>
+
+                <div class="browse-panel active" id="panel-regions">
+                    <div class="region-section">
+                        <div class="control-label">North America</div>
+                        <div class="location-tags">
+                            <button class="location-tag" data-country="US">United States</button>
+                            <button class="location-tag" data-country="CA">Canada</button>
+                            <button class="location-tag" data-country="MX">Mexico</button>
+                        </div>
+                    </div>
+                    <div class="region-section">
+                        <div class="control-label">Europe</div>
+                        <div class="location-tags">
+                            <button class="location-tag" data-country="GB">United Kingdom</button>
+                            <button class="location-tag" data-country="DE">Germany</button>
+                            <button class="location-tag" data-country="FR">France</button>
+                            <button class="location-tag" data-country="ES">Spain</button>
+                            <button class="location-tag" data-country="IT">Italy</button>
+                            <button class="location-tag" data-country="NL">Netherlands</button>
+                            <button class="location-tag" data-country="SE">Sweden</button>
+                            <button class="location-tag" data-country="PL">Poland</button>
+                        </div>
+                    </div>
+                    <div class="region-section">
+                        <div class="control-label">Asia & Pacific</div>
+                        <div class="location-tags">
+                            <button class="location-tag" data-country="JP">Japan</button>
+                            <button class="location-tag" data-country="KR">South Korea</button>
+                            <button class="location-tag" data-country="AU">Australia</button>
+                            <button class="location-tag" data-country="NZ">New Zealand</button>
+                            <button class="location-tag" data-country="IN">India</button>
+                            <button class="location-tag" data-country="PH">Philippines</button>
+                        </div>
+                    </div>
+                    <div class="region-section">
+                        <div class="control-label">Latin America</div>
+                        <div class="location-tags">
+                            <button class="location-tag" data-country="BR">Brazil</button>
+                            <button class="location-tag" data-country="AR">Argentina</button>
+                            <button class="location-tag" data-country="CO">Colombia</button>
+                            <button class="location-tag" data-country="CL">Chile</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="browse-panel" id="panel-genres">
+                    <div class="location-tags genre-tags">
+                        <button class="genre-tag" data-genre="pop">Pop</button>
+                        <button class="genre-tag" data-genre="rock">Rock</button>
+                        <button class="genre-tag" data-genre="hip hop">Hip Hop</button>
+                        <button class="genre-tag" data-genre="electronic">Electronic</button>
+                        <button class="genre-tag" data-genre="dance">Dance</button>
+                        <button class="genre-tag" data-genre="house">House</button>
+                        <button class="genre-tag" data-genre="jazz">Jazz</button>
+                        <button class="genre-tag" data-genre="classical">Classical</button>
+                        <button class="genre-tag" data-genre="country">Country</button>
+                        <button class="genre-tag" data-genre="rnb">R&B</button>
+                        <button class="genre-tag" data-genre="soul">Soul</button>
+                        <button class="genre-tag" data-genre="reggae">Reggae</button>
+                        <button class="genre-tag" data-genre="latin">Latin</button>
+                        <button class="genre-tag" data-genre="metal">Metal</button>
+                        <button class="genre-tag" data-genre="punk">Punk</button>
+                        <button class="genre-tag" data-genre="indie">Indie</button>
+                        <button class="genre-tag" data-genre="alternative">Alternative</button>
+                        <button class="genre-tag" data-genre="ambient">Ambient</button>
+                        <button class="genre-tag" data-genre="chillout">Chillout</button>
+                        <button class="genre-tag" data-genre="lounge">Lounge</button>
+                        <button class="genre-tag" data-genre="80s">80s</button>
+                        <button class="genre-tag" data-genre="90s">90s</button>
+                        <button class="genre-tag" data-genre="oldies">Oldies</button>
+                        <button class="genre-tag" data-genre="news">News</button>
+                        <button class="genre-tag" data-genre="talk">Talk</button>
+                        <button class="genre-tag" data-genre="sports">Sports</button>
                     </div>
                 </div>
             </div>
@@ -1674,7 +1804,8 @@
             location: { country: 'US', state: '', city: '', countryName: 'United States' },
             audioElement: null,
             sourceNode: null,
-            currentStationIndex: -1
+            currentStationIndex: -1,
+            currentGenre: null
         };
 
         // Radio Browser API base URL
@@ -1683,6 +1814,7 @@
         // Get user location from IP
         async function detectLocation() {
             const locationDisplay = document.getElementById('location-display');
+            const stationListTitle = document.getElementById('station-list-title');
             try {
                 const response = await fetch('https://ipapi.co/json/');
                 const data = await response.json();
@@ -1696,10 +1828,12 @@
                     ? `${radioState.location.city || radioState.location.state}, ${radioState.location.country}`
                     : radioState.location.countryName;
                 locationDisplay.textContent = locationText;
+                stationListTitle.textContent = locationText + ' Stations';
                 await fetchStations();
             } catch (error) {
                 console.error('Location detection failed:', error);
                 locationDisplay.textContent = 'United States';
+                stationListTitle.textContent = 'US Stations';
                 await fetchStations();
             }
         }
@@ -1842,15 +1976,8 @@
                     document.getElementById('status-text').textContent = 'Playing: ' + (radioState.currentStation?.name || 'Custom Stream');
                 }).catch(error => {
                     console.error('Playback failed:', error);
-                    document.getElementById('status-text').textContent = 'Failed to play stream';
-                    document.getElementById('station-name').textContent = 'Stream unavailable';
+                    document.getElementById('status-text').textContent = 'Playback failed - try another station';
                 });
-
-                // Handle stream errors
-                radioState.audioElement.onerror = () => {
-                    document.getElementById('status-text').textContent = 'Stream error';
-                    document.getElementById('station-name').textContent = 'Stream unavailable';
-                };
 
                 // Start visualization
                 if (!animationId) {
@@ -2388,8 +2515,9 @@
         const changeLocationBtn = document.getElementById('change-location');
         const locationModal = document.getElementById('location-modal');
         const locationClose = document.getElementById('location-close');
-        const locationSearch = document.getElementById('location-search');
-        const locationSuggestions = document.getElementById('location-suggestions');
+        const browseTabs = document.querySelectorAll('.browse-tab');
+        const browsePanels = document.querySelectorAll('.browse-panel');
+        const genreTags = document.querySelectorAll('.genre-tag');
         const locationTags = document.querySelectorAll('.location-tag');
 
         // Toggle radio panel
@@ -2549,7 +2677,13 @@
         });
 
         // Refresh stations
-        refreshStationsBtn.addEventListener('click', fetchStations);
+        refreshStationsBtn.addEventListener('click', () => {
+            if (radioState.currentGenre) {
+                fetchStationsByGenre(radioState.currentGenre);
+            } else {
+                fetchStations();
+            }
+        });
 
         // Custom URL
         playCustomBtn.addEventListener('click', () => {
@@ -2587,64 +2721,80 @@
             }
         });
 
-        // Location search
-        let searchTimeout;
-        locationSearch.addEventListener('input', (e) => {
-            clearTimeout(searchTimeout);
-            const query = e.target.value.trim();
-
-            if (query.length < 2) {
-                locationSuggestions.innerHTML = '';
-                return;
-            }
-
-            searchTimeout = setTimeout(async () => {
-                try {
-                    const response = await fetch(`${RADIO_API}/countries`);
-                    const countries = await response.json();
-
-                    const matches = countries.filter(c =>
-                        c.name.toLowerCase().includes(query.toLowerCase())
-                    ).slice(0, 5);
-
-                    locationSuggestions.innerHTML = matches.map(c => `
-                        <div class="location-suggestion" data-country="${c.iso_3166_1}">
-                            ${c.name} (${c.stationcount} stations)
-                        </div>
-                    `).join('');
-
-                    locationSuggestions.querySelectorAll('.location-suggestion').forEach(item => {
-                        item.addEventListener('click', () => {
-                            selectLocation(item.dataset.country, '', item.textContent.split('(')[0].trim());
-                        });
-                    });
-                } catch (error) {
-                    console.error('Search failed:', error);
-                }
-            }, 300);
-        });
-
-        // Popular location tags
-        locationTags.forEach(tag => {
-            tag.addEventListener('click', () => {
-                const country = tag.dataset.country;
-                const state = tag.dataset.state || '';
-                selectLocation(country, state, tag.textContent);
+        // Browse tabs
+        browseTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                browseTabs.forEach(t => t.classList.remove('active'));
+                browsePanels.forEach(p => p.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
             });
         });
 
-        function selectLocation(country, state, displayName) {
+        // Country/Region tags
+        locationTags.forEach(tag => {
+            tag.addEventListener('click', () => {
+                const country = tag.dataset.country;
+                selectLocation(country, tag.textContent.trim());
+            });
+        });
+
+        // Genre tags
+        genreTags.forEach(tag => {
+            tag.addEventListener('click', () => {
+                const genre = tag.dataset.genre;
+                selectGenre(genre, tag.textContent.trim());
+            });
+        });
+
+        function selectLocation(country, displayName) {
             radioState.location = {
                 country: country,
-                state: state,
+                state: '',
                 city: '',
                 countryName: displayName
             };
+            radioState.currentGenre = null;
 
             document.getElementById('location-display').textContent = displayName;
+            document.getElementById('station-list-title').textContent = displayName + ' Stations';
             locationModal.classList.remove('visible');
             locationModal.setAttribute('aria-hidden', 'true');
             fetchStations();
+        }
+
+        function selectGenre(genre, displayName) {
+            radioState.currentGenre = genre;
+            radioState.location = { country: '', state: '', city: '', countryName: '' };
+
+            document.getElementById('location-display').textContent = displayName;
+            document.getElementById('station-list-title').textContent = displayName + ' Stations';
+            locationModal.classList.remove('visible');
+            locationModal.setAttribute('aria-hidden', 'true');
+            fetchStationsByGenre(genre);
+        }
+
+        // Fetch stations by genre
+        async function fetchStationsByGenre(genre) {
+            const stationList = document.getElementById('station-list');
+            const refreshBtn = document.getElementById('refresh-stations');
+
+            refreshBtn.classList.add('loading');
+            stationList.innerHTML = '<div style="padding: 10px; text-align: center; color: var(--text-dim);">Loading stations...</div>';
+
+            try {
+                const url = `${RADIO_API}/stations/search?limit=30&order=clickcount&reverse=true&hidebroken=true&tag=${encodeURIComponent(genre)}`;
+                const response = await fetch(url);
+                const stations = await response.json();
+
+                radioState.stations = stations.filter(s => s.url_resolved).slice(0, 20);
+                renderStationList();
+            } catch (error) {
+                console.error('Failed to fetch stations:', error);
+                stationList.innerHTML = '<div style="padding: 10px; text-align: center; color: var(--text-dim);">Failed to load stations</div>';
+            } finally {
+                refreshBtn.classList.remove('loading');
+            }
         }
 
         // Auto-open radio panel on mobile (where tab audio isn't supported)
