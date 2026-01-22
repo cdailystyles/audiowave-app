@@ -34,7 +34,7 @@
         </div>
 
         <!-- Radio Tuner Panel -->
-        <div id="radio-panel" class="radio-panel">
+        <div id="radio-panel" class="radio-panel visible">
             <div class="radio-header">
                 <span class="radio-title">Radio Stations</span>
                 <button id="radio-close" class="radio-close" aria-label="Close radio">&times;</button>
@@ -269,10 +269,10 @@
             getDisplayMedia: !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia)
         };
 
-        // Audio variables
+        // Audio variables (global for radio module access)
         let audioContext, analyser, dataArray, bufferLength;
         let mediaStream = null;
-        let animationId = null;
+        window.animationId = null;
 
         // Canvas setup
         const canvas = document.getElementById('visualizer-canvas');
@@ -401,9 +401,9 @@
             document.getElementById('status-indicator').classList.remove('active');
             document.getElementById('status-text').textContent = 'Capture stopped';
 
-            if (animationId && !window.radioModule?.radioState?.isPlaying) {
-                cancelAnimationFrame(animationId);
-                animationId = null;
+            if (window.animationId && !window.radioModule?.radioState?.isPlaying) {
+                cancelAnimationFrame(window.animationId);
+                window.animationId = null;
             }
         }
 
@@ -556,10 +556,12 @@
             }
         });
 
-        // Initialize radio on mobile or when radio button clicked
+        // Initialize radio panel - open by default
+        radioPanel.classList.add('visible');
+        radioBtn.classList.add('active');
+
+        // Hide tab audio button on mobile (not supported)
         if (!browserSupport.getDisplayMedia) {
-            radioPanel.classList.add('visible');
-            radioBtn.classList.add('active');
             captureBtn.style.display = 'none';
         }
 
@@ -578,7 +580,7 @@
 
         // Visualization loop
         function visualize() {
-            animationId = requestAnimationFrame(visualize);
+            window.animationId = requestAnimationFrame(visualize);
 
             if (!analyser || !dataArray) return;
 
