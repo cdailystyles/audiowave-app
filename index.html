@@ -1241,6 +1241,7 @@
         .location-modal.visible {
             opacity: 1;
             visibility: visible;
+            pointer-events: all;
         }
 
         .location-content {
@@ -1672,6 +1673,7 @@
             stations: [],
             location: { country: 'US', state: '', city: '', countryName: 'United States' },
             audioElement: null,
+            sourceNode: null,
             currentStationIndex: -1
         };
 
@@ -1781,7 +1783,20 @@
 
         // Play a stream URL
         async function playStreamUrl(url) {
-            stopRadio();
+            // Disconnect previous source if exists
+            if (radioState.sourceNode) {
+                try {
+                    radioState.sourceNode.disconnect();
+                } catch (e) {}
+                radioState.sourceNode = null;
+            }
+
+            // Stop previous audio without full cleanup
+            if (radioState.audioElement) {
+                radioState.audioElement.pause();
+                radioState.audioElement.src = '';
+                radioState.audioElement = null;
+            }
 
             try {
                 // Create audio element
@@ -1794,35 +1809,48 @@
                     audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 }
 
+                // Resume audio context if suspended (required by browsers)
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                }
+
                 radioState.audioElement.src = url;
 
-                // Wait for audio to be ready
-                await new Promise((resolve, reject) => {
-                    radioState.audioElement.oncanplay = resolve;
-                    radioState.audioElement.onerror = reject;
-                    setTimeout(reject, 10000); // 10 second timeout
-                });
+                // Connect to analyser immediately (no waiting for buffer)
+                radioState.sourceNode = audioContext.createMediaElementSource(radioState.audioElement);
 
-                // Connect to analyser
-                const source = audioContext.createMediaElementSource(radioState.audioElement);
-                analyser = audioContext.createAnalyser();
-                analyser.fftSize = 2048;
+                if (!analyser) {
+                    analyser = audioContext.createAnalyser();
+                    analyser.fftSize = 2048;
+                }
                 analyser.smoothingTimeConstant = config.smoothing;
 
-                source.connect(analyser);
+                radioState.sourceNode.connect(analyser);
                 analyser.connect(audioContext.destination);
 
                 bufferLength = analyser.frequencyBinCount;
                 dataArray = new Uint8Array(bufferLength);
 
-                // Play
-                await radioState.audioElement.play();
-                radioState.isPlaying = true;
-
-                // Update UI
+                // Update UI immediately
                 updatePlayButton(true);
-                document.getElementById('status-text').textContent = 'Playing: ' + (radioState.currentStation?.name || 'Custom Stream');
+                document.getElementById('status-text').textContent = 'Loading: ' + (radioState.currentStation?.name || 'Custom Stream');
                 document.getElementById('status-indicator').classList.add('active');
+
+                // Start playing immediately (will buffer as needed)
+                radioState.audioElement.play().then(() => {
+                    radioState.isPlaying = true;
+                    document.getElementById('status-text').textContent = 'Playing: ' + (radioState.currentStation?.name || 'Custom Stream');
+                }).catch(error => {
+                    console.error('Playback failed:', error);
+                    document.getElementById('status-text').textContent = 'Failed to play stream';
+                    document.getElementById('station-name').textContent = 'Stream unavailable';
+                });
+
+                // Handle stream errors
+                radioState.audioElement.onerror = () => {
+                    document.getElementById('status-text').textContent = 'Stream error';
+                    document.getElementById('station-name').textContent = 'Stream unavailable';
+                };
 
                 // Start visualization
                 if (!animationId) {
@@ -1833,12 +1861,19 @@
                 console.error('Failed to play stream:', error);
                 document.getElementById('status-text').textContent = 'Failed to play stream';
                 document.getElementById('station-name').textContent = 'Stream unavailable';
-                stopRadio();
             }
         }
 
         // Stop radio
         function stopRadio() {
+            // Disconnect source node
+            if (radioState.sourceNode) {
+                try {
+                    radioState.sourceNode.disconnect();
+                } catch (e) {}
+                radioState.sourceNode = null;
+            }
+
             if (radioState.audioElement) {
                 radioState.audioElement.pause();
                 radioState.audioElement.src = '';
