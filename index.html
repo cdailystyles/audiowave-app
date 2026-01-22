@@ -494,7 +494,7 @@
         // UI visibility
         hideUiBtn.addEventListener('click', () => document.body.classList.toggle('hide-ui'));
         controlPanel.addEventListener('click', (e) => {
-            if (document.body.classList.contains('hide-ui') && e.target === controlPanel) {
+            if (document.body.classList.contains('hide-ui')) {
                 document.body.classList.remove('hide-ui');
             }
         });
