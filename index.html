@@ -582,6 +582,11 @@
         function visualize() {
             window.animationId = requestAnimationFrame(visualize);
 
+            // Sync with window variables (set by radio module)
+            if (window.analyser) analyser = window.analyser;
+            if (window.dataArray) dataArray = window.dataArray;
+            if (window.bufferLength) bufferLength = window.bufferLength;
+
             if (!analyser || !dataArray) return;
 
             analyser.getByteFrequencyData(dataArray);
