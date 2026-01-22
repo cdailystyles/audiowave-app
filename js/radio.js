@@ -337,8 +337,7 @@ async function playStreamUrl(url) {
         window.bufferLength = window.analyser.frequencyBinCount;
         window.dataArray = new Uint8Array(window.bufferLength);
 
-        // Update UI immediately
-        updatePlayButton(true);
+        // Update UI to show loading state
         const statusText = document.getElementById('status-text');
         const statusIndicator = document.getElementById('status-indicator');
 
@@ -348,9 +347,13 @@ async function playStreamUrl(url) {
         // Start playing
         radioState.audioElement.play().then(() => {
             radioState.isPlaying = true;
+            updatePlayButton(true);
             if (statusText) statusText.textContent = 'Playing: ' + (radioState.currentStation?.name || 'Custom Stream');
         }).catch(error => {
             console.error('Playback failed:', error);
+            radioState.isPlaying = false;
+            updatePlayButton(false);
+            if (statusIndicator) statusIndicator.classList.remove('active');
             if (statusText) statusText.textContent = 'Playback failed - try another station';
         });
 
@@ -361,7 +364,11 @@ async function playStreamUrl(url) {
 
     } catch (error) {
         console.error('Failed to play stream:', error);
+        radioState.isPlaying = false;
+        updatePlayButton(false);
         const statusText = document.getElementById('status-text');
+        const statusIndicator = document.getElementById('status-indicator');
+        if (statusIndicator) statusIndicator.classList.remove('active');
         if (statusText) statusText.textContent = 'Failed to play stream';
     }
 }

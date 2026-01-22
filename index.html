@@ -386,6 +386,14 @@
 
             } catch (error) {
                 console.error('Capture failed:', error);
+                // Clean up any partial state
+                if (mediaStream) {
+                    mediaStream.getTracks().forEach(track => track.stop());
+                    mediaStream = null;
+                }
+                captureBtn.classList.remove('active');
+                captureBtn.textContent = 'Tab Audio';
+                document.getElementById('status-indicator').classList.remove('active');
                 document.getElementById('status-text').textContent = error.message || 'Capture failed';
             }
         });
@@ -1033,7 +1041,7 @@
                     const y = (i + time * 50) % height;
                     const opacity = 1 - (i / dropHeight);
                     const color = getColor(col, cols);
-                    ctx.fillStyle = color.replace('60%)', `60%, ${opacity})`);
+                    ctx.fillStyle = color.replace('hsl(', 'hsla(').replace('60%)', `60%, ${opacity})`);
                     ctx.shadowColor = color;
                     ctx.fillText(char, x, y);
                 }
