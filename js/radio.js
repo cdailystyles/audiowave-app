@@ -98,12 +98,11 @@ const radioState = {
     isPlaying: false,
     currentStation: null,
     stations: [],
-    location: { country: 'US', state: '' },
+    country: 'US',
     genre: '',
     audioElement: null,
     sourceNode: null,
-    currentStationIndex: -1,
-    statesCache: {}
+    currentStationIndex: -1
 };
 
 // Initialize country dropdown
@@ -115,7 +114,7 @@ function initCountryDropdown() {
         `<option value="${c.code}">${c.name}</option>`
     ).join('');
 
-    countrySelect.value = radioState.location.country;
+    countrySelect.value = radioState.country;
 }
 
 // Initialize genre dropdown
@@ -126,52 +125,6 @@ function initGenreDropdown() {
     genreSelect.innerHTML = GENRES.map(g =>
         `<option value="${g.value}">${g.name}</option>`
     ).join('');
-}
-
-// Fetch states/regions for a country
-async function fetchStates(countryCode) {
-    // Check cache first
-    if (radioState.statesCache[countryCode]) {
-        return radioState.statesCache[countryCode];
-    }
-
-    try {
-        const response = await fetch(`${RADIO_API}/states/${countryCode}/?hidebroken=true`);
-        const states = await response.json();
-
-        // Filter to states that actually have stations
-        const validStates = states
-            .filter(s => s.stationcount > 0)
-            .sort((a, b) => b.stationcount - a.stationcount)
-            .slice(0, 50); // Limit to top 50
-
-        radioState.statesCache[countryCode] = validStates;
-        return validStates;
-    } catch (error) {
-        console.error('Failed to fetch states:', error);
-        return [];
-    }
-}
-
-// Update state dropdown based on selected country
-async function updateStateDropdown(countryCode) {
-    const stateSelect = document.getElementById('state-select');
-    if (!stateSelect) return;
-
-    stateSelect.innerHTML = '<option value="">Loading...</option>';
-    stateSelect.disabled = true;
-
-    const states = await fetchStates(countryCode);
-
-    if (states.length === 0) {
-        stateSelect.innerHTML = '<option value="">All Regions</option>';
-    } else {
-        stateSelect.innerHTML = '<option value="">All Regions</option>' +
-            states.map(s => `<option value="${s.name}">${s.name} (${s.stationcount})</option>`).join('');
-    }
-
-    stateSelect.disabled = false;
-    radioState.location.state = '';
 }
 
 // Fetch stations based on current filters
@@ -188,11 +141,8 @@ async function fetchStations() {
     try {
         let url = `${RADIO_API}/stations/search?limit=50&order=clickcount&reverse=true&hidebroken=true`;
 
-        if (radioState.location.country) {
-            url += `&countrycode=${radioState.location.country}`;
-        }
-        if (radioState.location.state) {
-            url += `&state=${encodeURIComponent(radioState.location.state)}`;
+        if (radioState.country) {
+            url += `&countrycode=${radioState.country}`;
         }
         if (radioState.genre) {
             url += `&tag=${encodeURIComponent(radioState.genre)}`;
@@ -206,13 +156,8 @@ async function fetchStations() {
 
         // Update title
         if (stationListTitle) {
-            let title = '';
-            if (radioState.location.state) {
-                title = radioState.location.state;
-            } else {
-                const country = COUNTRIES.find(c => c.code === radioState.location.country);
-                title = country ? country.name : 'Stations';
-            }
+            const country = COUNTRIES.find(c => c.code === radioState.country);
+            let title = country ? country.name : 'Stations';
             if (radioState.genre) {
                 const genre = GENRES.find(g => g.value === radioState.genre);
                 title += ` - ${genre ? genre.name : radioState.genre}`;
@@ -438,20 +383,17 @@ async function detectLocation() {
         const response = await fetch('https://ipapi.co/json/');
         const data = await response.json();
 
-        radioState.location.country = data.country_code || 'US';
-        radioState.location.state = '';
+        radioState.country = data.country_code || 'US';
 
         const countrySelect = document.getElementById('country-select');
         if (countrySelect) {
-            countrySelect.value = radioState.location.country;
+            countrySelect.value = radioState.country;
         }
 
-        await updateStateDropdown(radioState.location.country);
         await fetchStations();
     } catch (error) {
         console.error('Location detection failed:', error);
-        radioState.location.country = 'US';
-        await updateStateDropdown('US');
+        radioState.country = 'US';
         await fetchStations();
     }
 }
@@ -462,17 +404,7 @@ function initRadioEventListeners() {
     const countrySelect = document.getElementById('country-select');
     if (countrySelect) {
         countrySelect.addEventListener('change', async (e) => {
-            radioState.location.country = e.target.value;
-            await updateStateDropdown(e.target.value);
-            await fetchStations();
-        });
-    }
-
-    // State select
-    const stateSelect = document.getElementById('state-select');
-    if (stateSelect) {
-        stateSelect.addEventListener('change', async (e) => {
-            radioState.location.state = e.target.value;
+            radioState.country = e.target.value;
             await fetchStations();
         });
     }

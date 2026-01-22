@@ -51,14 +51,6 @@
                     </div>
                 </div>
                 <div class="selector-group">
-                    <label for="state-select">Region / State</label>
-                    <div class="styled-select">
-                        <select id="state-select" aria-label="Select region">
-                            <option value="">All Regions</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="selector-group">
                     <label for="genre-select">Genre</label>
                     <div class="styled-select">
                         <select id="genre-select" aria-label="Select genre">
@@ -500,7 +492,10 @@
         }
 
         // UI visibility
-        hideUiBtn.addEventListener('click', () => document.body.classList.toggle('hide-ui'));
+        hideUiBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.body.classList.add('hide-ui');
+        });
         controlPanel.addEventListener('click', (e) => {
             if (document.body.classList.contains('hide-ui')) {
                 document.body.classList.remove('hide-ui');
