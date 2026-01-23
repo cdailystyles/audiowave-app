@@ -242,13 +242,16 @@
 
     <!-- Main Application Script -->
     <script>
+        // Check for reduced motion preference
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
         // Configuration
         const config = {
             pattern: 'bars',
             amplitude: 1,
-            glow: 15,
-            smoothing: 0.8,
-            speed: 1,
+            glow: prefersReducedMotion ? 5 : 15,
+            smoothing: prefersReducedMotion ? 0.95 : 0.8,
+            speed: prefersReducedMotion ? 0.3 : 1,
             colorMode: 'rainbow',
             hueShift: 0
         };
@@ -266,22 +269,33 @@
         let mediaStream = null;
         window.animationId = null;
 
-        // Canvas setup
+        // Canvas setup with optimization hints
         const canvas = document.getElementById('visualizer-canvas');
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', {
+            alpha: false,           // No transparency needed, improves performance
+            desynchronized: true    // Reduce latency by bypassing compositor
+        });
         let width, height;
         let time = 0;
         let hue = 0;
 
+        let resizeTimeout;
         function resize() {
-            width = canvas.width = window.innerWidth * window.devicePixelRatio;
-            height = canvas.height = window.innerHeight * window.devicePixelRatio;
-            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = window.innerWidth * dpr;
+            canvas.height = window.innerHeight * dpr;
+            // Reset transform before scaling to prevent cumulative scaling
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.scale(dpr, dpr);
             width = window.innerWidth;
             height = window.innerHeight;
         }
         resize();
-        window.addEventListener('resize', resize);
+        // Throttle resize handler to prevent performance issues
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(resize, 100);
+        });
 
         // DOM elements
         const captureBtn = document.getElementById('capture-btn');
@@ -394,6 +408,16 @@
             if (mediaStream) {
                 mediaStream.getTracks().forEach(track => track.stop());
                 mediaStream = null;
+            }
+
+            // Clean up audio context resources to prevent memory leaks
+            if (audioContext && !window.radioModule?.radioState?.isPlaying) {
+                // Don't close if radio might still use it, just disconnect analyser
+                if (analyser) {
+                    try {
+                        analyser.disconnect();
+                    } catch (e) {}
+                }
             }
 
             captureBtn.classList.remove('active');
@@ -578,6 +602,34 @@
             }
         }
 
+        // Pattern lookup table (defined once for performance)
+        const patterns = {
+            bars: () => drawBars(),
+            wave: () => drawWave(),
+            circular: () => drawCircular(),
+            spectrum: () => drawSpectrum(),
+            radial: () => drawRadial(),
+            particles: () => drawParticles(),
+            rings: () => drawRings(),
+            dna: () => drawDNA(),
+            spiral: () => drawSpiral(),
+            grid: () => drawGrid(),
+            tunnel: () => drawTunnel(),
+            plasma: () => drawPlasma(),
+            fractal: () => drawFractal(),
+            mandala: () => drawMandala(),
+            galaxy: () => drawGalaxy(),
+            vortex: () => drawVortex(),
+            kaleidoscope: () => drawKaleidoscope(),
+            matrix: () => drawMatrix(),
+            nebula: () => drawNebula(),
+            helix: () => drawHelix(),
+            petals: () => drawPetals(),
+            crystals: () => drawCrystals(),
+            fireworks: () => drawFireworks(),
+            lightning: () => drawLightning()
+        };
+
         // Make visualize function global for radio module
         window.visualize = visualize;
 
@@ -597,35 +649,9 @@
             time += 0.016 * config.speed;
             hue = (hue + 0.5 * config.speed) % 360;
 
-            const patterns = {
-                bars: drawBars,
-                wave: drawWave,
-                circular: drawCircular,
-                spectrum: drawSpectrum,
-                radial: drawRadial,
-                particles: drawParticles,
-                rings: drawRings,
-                dna: drawDNA,
-                spiral: drawSpiral,
-                grid: drawGrid,
-                tunnel: drawTunnel,
-                plasma: drawPlasma,
-                fractal: drawFractal,
-                mandala: drawMandala,
-                galaxy: drawGalaxy,
-                vortex: drawVortex,
-                kaleidoscope: drawKaleidoscope,
-                matrix: drawMatrix,
-                nebula: drawNebula,
-                helix: drawHelix,
-                petals: drawPetals,
-                crystals: drawCrystals,
-                fireworks: drawFireworks,
-                lightning: drawLightning
-            };
-
-            if (patterns[config.pattern]) {
-                patterns[config.pattern]();
+            const patternFn = patterns[config.pattern];
+            if (patternFn) {
+                patternFn();
             }
         }
 
@@ -874,16 +900,22 @@
             ctx.fillRect(0, 0, width, height);
             const avgFreq = dataArray.reduce((a, b) => a + b, 0) / bufferLength;
             const intensity = (avgFreq / 255) * config.amplitude;
-            for (let y = 0; y < height; y += 8) {
-                for (let x = 0; x < width; x += 8) {
+            const cellSize = 12; // Increased from 8 for better performance
+            const lightness = 50 + intensity * 30;
+            const alpha = 0.3 + intensity * 0.5;
+            // Pre-calculate time-based sin for optimization
+            const sinTime = Math.sin(time);
+            const cosTime = Math.cos(time);
+            for (let y = 0; y < height; y += cellSize) {
+                const sinY = Math.sin(y * 0.01 + time);
+                for (let x = 0; x < width; x += cellSize) {
+                    // Simplified plasma calculation for better performance
                     const value1 = Math.sin(x * 0.01 + time);
-                    const value2 = Math.sin(y * 0.01 + time);
-                    const value3 = Math.sin((x + y) * 0.01 + time);
-                    const value4 = Math.sin(Math.sqrt(x * x + y * y) * 0.01 + time);
-                    const plasma = (value1 + value2 + value3 + value4) / 4;
-                    const colorValue = ((plasma + 1) / 2) * 360;
-                    ctx.fillStyle = `hsla(${(colorValue + hue) % 360}, 100%, ${50 + intensity * 30}%, ${0.3 + intensity * 0.5})`;
-                    ctx.fillRect(x, y, 8, 8);
+                    const value3 = Math.sin((x + y) * 0.008 + time);
+                    const plasma = (value1 + sinY + value3) / 3;
+                    const colorValue = ((plasma + 1) * 180 + hue) % 360;
+                    ctx.fillStyle = `hsla(${colorValue}, 100%, ${lightness}%, ${alpha})`;
+                    ctx.fillRect(x, y, cellSize, cellSize);
                 }
             }
         }

@@ -1084,3 +1084,27 @@ body.hide-ui #help-toggle {
         justify-content: center;
     }
 }
+
+/* Reduced motion accessibility support */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+
+    .refresh-btn.loading {
+        animation: none;
+    }
+
+    .status-indicator.active {
+        animation: none;
+    }
+
+    .radio-play-btn:hover,
+    body.hide-ui #control-panel:hover {
+        transform: none;
+    }
+}

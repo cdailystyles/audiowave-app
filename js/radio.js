@@ -148,8 +148,21 @@ async function fetchStations() {
             url += `&tag=${encodeURIComponent(radioState.genre)}`;
         }
 
-        const response = await fetch(url);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+        }
+
         const stations = await response.json();
+
+        if (!Array.isArray(stations)) {
+            throw new Error('Invalid response from server');
+        }
 
         radioState.stations = stations.filter(s => s.url_resolved).slice(0, 30);
         radioState.currentStationIndex = -1;
@@ -168,8 +181,16 @@ async function fetchStations() {
         renderStationList();
     } catch (error) {
         console.error('Failed to fetch stations:', error);
+        let errorMessage = 'Failed to load stations';
+        if (error.name === 'AbortError') {
+            errorMessage = 'Request timed out. Please try again.';
+        } else if (!navigator.onLine) {
+            errorMessage = 'No internet connection';
+        } else if (error.message.includes('Server error')) {
+            errorMessage = 'Server temporarily unavailable';
+        }
         if (stationList) {
-            stationList.innerHTML = '<div class="error-message">Failed to load stations</div>';
+            stationList.innerHTML = `<div class="error-message">${errorMessage}</div>`;
         }
     } finally {
         if (refreshBtn) refreshBtn.classList.remove('loading');
@@ -202,11 +223,26 @@ function renderStationList() {
     });
 }
 
-// HTML escape helper
+// HTML escape helper - optimized without DOM manipulation
 function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    if (!text) return '';
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+// URL validation helper
+function isValidStreamUrl(url) {
+    if (!url || typeof url !== 'string') return false;
+    try {
+        const parsed = new URL(url);
+        return ['http:', 'https:'].includes(parsed.protocol);
+    } catch {
+        return false;
+    }
 }
 
 // Play a station by index
@@ -380,10 +416,25 @@ function nextStation() {
 // Detect user location
 async function detectLocation() {
     try {
-        const response = await fetch('https://ipapi.co/json/');
-        const data = await response.json();
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-        radioState.country = data.country_code || 'US';
+        const response = await fetch('https://ipapi.co/json/', { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            throw new Error('Location service unavailable');
+        }
+
+        const data = await response.json();
+        const detectedCountry = data.country_code;
+
+        // Validate that the detected country is in our list
+        if (detectedCountry && COUNTRIES.some(c => c.code === detectedCountry)) {
+            radioState.country = detectedCountry;
+        } else {
+            radioState.country = 'US';
+        }
 
         const countrySelect = document.getElementById('country-select');
         if (countrySelect) {
@@ -394,6 +445,10 @@ async function detectLocation() {
     } catch (error) {
         console.error('Location detection failed:', error);
         radioState.country = 'US';
+        const countrySelect = document.getElementById('country-select');
+        if (countrySelect) {
+            countrySelect.value = 'US';
+        }
         await fetchStations();
     }
 }
@@ -461,15 +516,24 @@ function initRadioEventListeners() {
     if (playCustomBtn && customUrlInput) {
         playCustomBtn.addEventListener('click', () => {
             const url = customUrlInput.value.trim();
-            if (url) {
-                radioState.currentStation = { name: 'Custom Stream', url_resolved: url };
-                radioState.currentStationIndex = -1;
-                const stationName = document.getElementById('station-name');
-                const stationGenre = document.getElementById('station-genre');
-                if (stationName) stationName.textContent = 'Custom Stream';
-                if (stationGenre) stationGenre.textContent = '';
-                playStreamUrl(url);
+            if (!url) {
+                const statusText = document.getElementById('status-text');
+                if (statusText) statusText.textContent = 'Please enter a stream URL';
+                return;
             }
+            if (!isValidStreamUrl(url)) {
+                const statusText = document.getElementById('status-text');
+                if (statusText) statusText.textContent = 'Invalid URL - must start with http:// or https://';
+                customUrlInput.focus();
+                return;
+            }
+            radioState.currentStation = { name: 'Custom Stream', url_resolved: url };
+            radioState.currentStationIndex = -1;
+            const stationName = document.getElementById('station-name');
+            const stationGenre = document.getElementById('station-genre');
+            if (stationName) stationName.textContent = 'Custom Stream';
+            if (stationGenre) stationGenre.textContent = '';
+            playStreamUrl(url);
         });
 
         customUrlInput.addEventListener('keydown', (e) => {
