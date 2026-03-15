@@ -3,9 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Real-time audio visualizer with classic Windows Media Player effects. Visualize music from any browser tab with customizable patterns, colors, and effects.">
-    <meta name="keywords" content="audio visualizer, music visualizer, spectrum analyzer, waveform, audio reactive">
-    <title>AUDIOWAVE.APP</title>
+    <meta name="description" content="Free real-time audio visualizer with 24 stunning patterns. Stream internet radio from 50+ countries or visualize any browser tab audio. Customizable colors, effects, and presets. No signup required.">
+    <meta name="keywords" content="audio visualizer, music visualizer, spectrum analyzer, waveform, audio reactive, internet radio, free visualizer">
+    <title>AudioWave.app — Free Online Audio Visualizer & Radio</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="canonical" href="https://audiowave.app/">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://audiowave.app/">
+    <meta property="og:title" content="AudioWave.app — Free Online Audio Visualizer & Radio">
+    <meta property="og:description" content="Real-time audio visualizer with 24 stunning patterns. Stream internet radio from 50+ countries or visualize any browser tab audio. Free, no signup required.">
+    <meta property="og:site_name" content="AudioWave.app">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="AudioWave.app — Free Audio Visualizer & Radio">
+    <meta name="twitter:description" content="Real-time audio visualizer with 24 stunning patterns. Stream radio from 50+ countries or visualize any browser tab audio.">
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "AudioWave.app",
+        "url": "https://audiowave.app",
+        "description": "Real-time audio visualizer with 24 stunning patterns. Stream internet radio from 50+ countries or visualize any browser tab audio.",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "Any",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "browserRequirements": "Requires a modern browser with Web Audio API support"
+    }
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -225,6 +255,16 @@
                 <p><strong>Radio:</strong> Browse stations by country, region, or genre. Click a station to start playing.</p>
                 <p><strong>Tab Audio:</strong> Capture audio from any browser tab (desktop only). Select the tab playing audio when prompted.</p>
             </div>
+            <!-- AdSense: In-Help Ad -->
+            <div style="margin:16px 0;">
+                <ins class="adsbygoogle"
+                    style="display:block"
+                    data-ad-client="ca-pub-2337547089019763"
+                    data-ad-slot="auto"
+                    data-ad-format="fluid"
+                    data-full-width-responsive="true"></ins>
+            </div>
+
             <div class="help-section">
                 <h3>Keyboard Shortcuts</h3>
                 <div class="shortcut-grid">
@@ -238,6 +278,16 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- AdSense: Bottom Anchor Ad -->
+    <div id="ad-container" style="position:fixed;bottom:0;left:0;right:0;z-index:50;text-align:center;pointer-events:all;">
+        <ins class="adsbygoogle"
+            style="display:block"
+            data-ad-client="ca-pub-2337547089019763"
+            data-ad-slot="auto"
+            data-ad-format="anchor"
+            data-full-width-responsive="true"></ins>
     </div>
 
     <!-- Radio Module -->
@@ -258,6 +308,23 @@
             colorMode: 'rainbow',
             hueShift: 0
         };
+
+        // Restore saved settings
+        try {
+            const saved = JSON.parse(localStorage.getItem('audiowave-config'));
+            if (saved) Object.assign(config, saved);
+        } catch (e) {}
+
+        // Auto-save settings on change (debounced)
+        let saveTimeout;
+        function saveConfig() {
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                try {
+                    localStorage.setItem('audiowave-config', JSON.stringify(config));
+                } catch (e) {}
+            }, 500);
+        }
 
         // Make config global for radio module
         window.config = config;
@@ -440,6 +507,7 @@
                 patternBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 config.pattern = btn.dataset.pattern;
+                saveConfig();
             });
         });
 
@@ -449,16 +517,17 @@
                 colorModeBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 config.colorMode = btn.dataset.mode;
+                saveConfig();
             });
         });
 
         // Sliders
         const sliders = {
-            'amplitude': (v) => { config.amplitude = v; document.getElementById('amplitude-value').textContent = Math.round(v * 100) + '%'; },
-            'glow': (v) => { config.glow = v; document.getElementById('glow-value').textContent = v; },
-            'smoothing': (v) => { config.smoothing = v; if (analyser) analyser.smoothingTimeConstant = v; document.getElementById('smoothing-value').textContent = v.toFixed(2); },
-            'speed': (v) => { config.speed = v; document.getElementById('speed-value').textContent = v.toFixed(1) + 'x'; },
-            'hue-shift': (v) => { config.hueShift = v; document.getElementById('hue-value').textContent = v + '°'; }
+            'amplitude': (v) => { config.amplitude = v; document.getElementById('amplitude-value').textContent = Math.round(v * 100) + '%'; saveConfig(); },
+            'glow': (v) => { config.glow = v; document.getElementById('glow-value').textContent = v; saveConfig(); },
+            'smoothing': (v) => { config.smoothing = v; if (analyser) analyser.smoothingTimeConstant = v; document.getElementById('smoothing-value').textContent = v.toFixed(2); saveConfig(); },
+            'speed': (v) => { config.speed = v; document.getElementById('speed-value').textContent = v.toFixed(1) + 'x'; saveConfig(); },
+            'hue-shift': (v) => { config.hueShift = v; document.getElementById('hue-value').textContent = v + '°'; saveConfig(); }
         };
 
         Object.keys(sliders).forEach(id => {
@@ -585,6 +654,9 @@
                     }
             }
         });
+
+        // Restore UI from saved config
+        updateUIFromConfig();
 
         // Initialize radio panel - open by default
         radioPanel.classList.add('visible');
@@ -1266,6 +1338,12 @@
         if (window.radioModule) {
             window.radioModule.init();
         }
+
+        // Initialize AdSense ad units
+        try {
+            (adsbygoogle = window.adsbygoogle || []).push({});
+            (adsbygoogle = window.adsbygoogle || []).push({});
+        } catch (e) {}
     </script>
 </body>
 </html>

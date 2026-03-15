@@ -93,17 +93,25 @@ const GENRES = [
     { value: 'sports', name: 'Sports' }
 ];
 
-// Radio state
+// Radio state (restore saved country/genre)
+const savedRadio = (() => { try { return JSON.parse(localStorage.getItem('audiowave-radio')) || {}; } catch { return {}; } })();
 const radioState = {
     isPlaying: false,
     currentStation: null,
     stations: [],
-    country: 'US',
-    genre: '',
+    country: savedRadio.country || 'US',
+    genre: savedRadio.genre || '',
     audioElement: null,
     sourceNode: null,
     currentStationIndex: -1
 };
+
+// Save radio preferences
+function saveRadioPrefs() {
+    try {
+        localStorage.setItem('audiowave-radio', JSON.stringify({ country: radioState.country, genre: radioState.genre }));
+    } catch (e) {}
+}
 
 // Initialize country dropdown
 function initCountryDropdown() {
@@ -413,11 +421,21 @@ function nextStation() {
     playStation(newIndex);
 }
 
-// Detect user location
+// Detect user location (skip if saved preference exists)
 async function detectLocation() {
+    // If user already has a saved preference, use it directly
+    if (savedRadio.country) {
+        const countrySelect = document.getElementById('country-select');
+        if (countrySelect) countrySelect.value = radioState.country;
+        const genreSelect = document.getElementById('genre-select');
+        if (genreSelect) genreSelect.value = radioState.genre;
+        await fetchStations();
+        return;
+    }
+
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
 
         const response = await fetch('https://ipapi.co/json/', { signal: controller.signal });
         clearTimeout(timeoutId);
@@ -429,7 +447,6 @@ async function detectLocation() {
         const data = await response.json();
         const detectedCountry = data.country_code;
 
-        // Validate that the detected country is in our list
         if (detectedCountry && COUNTRIES.some(c => c.code === detectedCountry)) {
             radioState.country = detectedCountry;
         } else {
@@ -437,18 +454,15 @@ async function detectLocation() {
         }
 
         const countrySelect = document.getElementById('country-select');
-        if (countrySelect) {
-            countrySelect.value = radioState.country;
-        }
+        if (countrySelect) countrySelect.value = radioState.country;
 
+        saveRadioPrefs();
         await fetchStations();
     } catch (error) {
         console.error('Location detection failed:', error);
         radioState.country = 'US';
         const countrySelect = document.getElementById('country-select');
-        if (countrySelect) {
-            countrySelect.value = 'US';
-        }
+        if (countrySelect) countrySelect.value = 'US';
         await fetchStations();
     }
 }
@@ -460,6 +474,7 @@ function initRadioEventListeners() {
     if (countrySelect) {
         countrySelect.addEventListener('change', async (e) => {
             radioState.country = e.target.value;
+            saveRadioPrefs();
             await fetchStations();
         });
     }
@@ -469,6 +484,7 @@ function initRadioEventListeners() {
     if (genreSelect) {
         genreSelect.addEventListener('change', async (e) => {
             radioState.genre = e.target.value;
+            saveRadioPrefs();
             await fetchStations();
         });
     }
