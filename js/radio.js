@@ -157,7 +157,7 @@ async function fetchStations() {
         }
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
 
         const response = await fetch(url, { signal: controller.signal });
         clearTimeout(timeoutId);
@@ -205,7 +205,7 @@ async function fetchStations() {
     }
 }
 
-// Render station list
+// Render station list with favorite hearts
 function renderStationList() {
     const stationList = document.getElementById('station-list');
     if (!stationList) return;
@@ -215,23 +215,47 @@ function renderStationList() {
         return;
     }
 
-    stationList.innerHTML = radioState.stations.map((station, index) => `
+    const favModule = window.AudioWaveFavorites;
+
+    stationList.innerHTML = radioState.stations.map((station, index) => {
+        const isFav = favModule ? favModule.isFavorite(station.url_resolved) : false;
+        return `
         <div class="station-item ${radioState.currentStationIndex === index ? 'active' : ''}" data-index="${index}">
             <span class="station-item-name">${escapeHtml(station.name)}</span>
-            <span class="station-item-freq">${station.tags ? station.tags.split(',')[0] : ''}</span>
-        </div>
-    `).join('');
+            <div class="station-item-actions">
+                <span class="station-item-freq">${station.tags ? station.tags.split(',')[0] : ''}</span>
+                <button class="station-heart ${isFav ? 'favorited' : ''}" data-url="${escapeAttr(station.url_resolved)}" data-index="${index}" aria-label="${isFav ? 'Remove from favorites' : 'Add to favorites'}">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="${isFav ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                </button>
+            </div>
+        </div>`;
+    }).join('');
 
     // Add click handlers
     stationList.querySelectorAll('.station-item').forEach(item => {
-        item.addEventListener('click', () => {
+        item.addEventListener('click', (e) => {
+            if (e.target.closest('.station-heart')) return;
             const index = parseInt(item.dataset.index);
             playStation(index);
         });
     });
+
+    // Heart click handlers
+    stationList.querySelectorAll('.station-heart').forEach(heart => {
+        heart.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const index = parseInt(heart.dataset.index);
+            const station = radioState.stations[index];
+            if (station && favModule) {
+                favModule.toggle(station);
+                // Re-render to update heart icon
+                renderStationList();
+            }
+        });
+    });
 }
 
-// HTML escape helper - optimized without DOM manipulation
+// HTML escape helper
 function escapeHtml(text) {
     if (!text) return '';
     return text
@@ -240,6 +264,11 @@ function escapeHtml(text) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+}
+
+function escapeAttr(text) {
+    if (!text) return '';
+    return text.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
 // URL validation helper
@@ -274,6 +303,11 @@ async function playStation(index) {
 
 // Play a stream URL
 async function playStreamUrl(url) {
+    // Stop mic if active
+    if (window.AudioWaveMic?.isActive()) {
+        window.AudioWaveMic.stop();
+    }
+
     // Disconnect previous source if exists
     if (radioState.sourceNode) {
         try {
@@ -337,13 +371,18 @@ async function playStreamUrl(url) {
         radioState.audioElement.play().then(() => {
             radioState.isPlaying = true;
             updatePlayButton(true);
-            if (statusText) statusText.textContent = 'Playing: ' + (radioState.currentStation?.name || 'Custom Stream');
+            const name = radioState.currentStation?.name || 'Custom Stream';
+            if (statusText) statusText.textContent = 'Playing: ' + name;
+
+            // Update now playing bar
+            updateNowPlaying(name, radioState.currentStation?.tags || '');
         }).catch(error => {
             console.error('Playback failed:', error);
             radioState.isPlaying = false;
             updatePlayButton(false);
             if (statusIndicator) statusIndicator.classList.remove('active');
             if (statusText) statusText.textContent = 'Playback failed - try another station';
+            hideNowPlaying();
         });
 
         // Start visualization if available
@@ -359,7 +398,29 @@ async function playStreamUrl(url) {
         const statusIndicator = document.getElementById('status-indicator');
         if (statusIndicator) statusIndicator.classList.remove('active');
         if (statusText) statusText.textContent = 'Failed to play stream';
+        hideNowPlaying();
     }
+}
+
+// Update now playing bar
+function updateNowPlaying(name, tags) {
+    const nowPlaying = document.getElementById('now-playing');
+    if (!nowPlaying) return;
+
+    nowPlaying.classList.add('visible');
+    const npName = document.getElementById('np-name');
+    const npGenre = document.getElementById('np-genre');
+    if (npName) npName.textContent = name;
+    if (npGenre) npGenre.textContent = tags ? tags.split(',').slice(0, 2).join(', ') : 'Radio';
+
+    // Update now playing play button
+    const npPlayBtn = document.getElementById('np-play');
+    if (npPlayBtn) npPlayBtn.classList.add('playing');
+}
+
+function hideNowPlaying() {
+    const nowPlaying = document.getElementById('now-playing');
+    if (nowPlaying) nowPlaying.classList.remove('visible');
 }
 
 // Stop radio playback
@@ -385,6 +446,10 @@ function stopRadio() {
 
     if (statusIndicator) statusIndicator.classList.remove('active');
     if (statusText) statusText.textContent = 'Stopped';
+
+    // Update now playing bar
+    const npPlayBtn = document.getElementById('np-play');
+    if (npPlayBtn) npPlayBtn.classList.remove('playing');
 }
 
 // Update play button state
@@ -403,6 +468,12 @@ function updatePlayButton(playing) {
 
     if (playIcon) playIcon.style.display = playing ? 'none' : 'block';
     if (pauseIcon) pauseIcon.style.display = playing ? 'block' : 'none';
+
+    // Also update now playing play button
+    const npPlayBtn = document.getElementById('np-play');
+    if (npPlayBtn) {
+        npPlayBtn.classList.toggle('playing', playing);
+    }
 }
 
 // Navigate to previous station
@@ -421,9 +492,59 @@ function nextStation() {
     playStation(newIndex);
 }
 
+// Station search
+function initStationSearch() {
+    const searchInput = document.getElementById('station-search');
+    if (!searchInput) return;
+
+    let searchTimeout;
+    searchInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        const query = e.target.value.trim();
+
+        if (!query) {
+            renderStationList();
+            return;
+        }
+
+        searchTimeout = setTimeout(() => {
+            searchStations(query);
+        }, 400);
+    });
+}
+
+async function searchStations(query) {
+    const stationList = document.getElementById('station-list');
+    if (!stationList) return;
+
+    stationList.innerHTML = '<div class="loading-message">Searching...</div>';
+
+    try {
+        const url = `${RADIO_API}/stations/search?name=${encodeURIComponent(query)}&limit=30&order=clickcount&reverse=true&hidebroken=true`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) throw new Error('Search failed');
+
+        const stations = await response.json();
+        if (!Array.isArray(stations)) throw new Error('Invalid response');
+
+        radioState.stations = stations.filter(s => s.url_resolved).slice(0, 30);
+        radioState.currentStationIndex = -1;
+        renderStationList();
+    } catch (error) {
+        console.error('Station search failed:', error);
+        if (stationList) {
+            stationList.innerHTML = '<div class="error-message">Search failed. Try again.</div>';
+        }
+    }
+}
+
 // Detect user location (skip if saved preference exists)
 async function detectLocation() {
-    // If user already has a saved preference, use it directly
     if (savedRadio.country) {
         const countrySelect = document.getElementById('country-select');
         if (countrySelect) countrySelect.value = radioState.country;
@@ -475,6 +596,9 @@ function initRadioEventListeners() {
         countrySelect.addEventListener('change', async (e) => {
             radioState.country = e.target.value;
             saveRadioPrefs();
+            // Clear search when changing filters
+            const searchInput = document.getElementById('station-search');
+            if (searchInput) searchInput.value = '';
             await fetchStations();
         });
     }
@@ -485,6 +609,8 @@ function initRadioEventListeners() {
         genreSelect.addEventListener('change', async (e) => {
             radioState.genre = e.target.value;
             saveRadioPrefs();
+            const searchInput = document.getElementById('station-search');
+            if (searchInput) searchInput.value = '';
             await fetchStations();
         });
     }
@@ -558,6 +684,26 @@ function initRadioEventListeners() {
             }
         });
     }
+
+    // Now Playing bar controls
+    const npPlayBtn = document.getElementById('np-play');
+    const npPrevBtn = document.getElementById('np-prev');
+    const npNextBtn = document.getElementById('np-next');
+
+    if (npPlayBtn) {
+        npPlayBtn.addEventListener('click', () => {
+            if (radioState.isPlaying) {
+                stopRadio();
+            } else if (radioState.currentStation) {
+                playStreamUrl(radioState.currentStation.url_resolved);
+            }
+        });
+    }
+    if (npPrevBtn) npPrevBtn.addEventListener('click', prevStation);
+    if (npNextBtn) npNextBtn.addEventListener('click', nextStation);
+
+    // Station search
+    initStationSearch();
 }
 
 // Initialize radio module
@@ -572,6 +718,7 @@ function initRadio() {
 window.radioModule = {
     init: initRadio,
     playStation,
+    playStreamUrl,
     stopRadio,
     prevStation,
     nextStation,

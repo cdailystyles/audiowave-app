@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Free real-time audio visualizer with 24 stunning patterns. Stream internet radio from 50+ countries or visualize any browser tab audio. Customizable colors, effects, and presets. No signup required.">
-    <meta name="keywords" content="audio visualizer, music visualizer, spectrum analyzer, waveform, audio reactive, internet radio, free visualizer">
+    <meta name="description" content="Free real-time audio visualizer with 24 stunning patterns. Stream internet radio from 50+ countries, use your microphone, or visualize any browser tab audio. Customizable themes, colors, effects, and presets. No signup required.">
+    <meta name="keywords" content="audio visualizer, music visualizer, spectrum analyzer, waveform, audio reactive, internet radio, free visualizer, microphone visualizer">
     <title>AudioWave.app — Free Online Audio Visualizer & Radio</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="canonical" href="https://audiowave.app/">
@@ -13,7 +13,7 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://audiowave.app/">
     <meta property="og:title" content="AudioWave.app — Free Online Audio Visualizer & Radio">
-    <meta property="og:description" content="Real-time audio visualizer with 24 stunning patterns. Stream internet radio from 50+ countries or visualize any browser tab audio. Free, no signup required.">
+    <meta property="og:description" content="Real-time audio visualizer with 24 stunning patterns. Stream internet radio from 50+ countries, use your microphone, or visualize any browser tab audio. Free, no signup required.">
     <meta property="og:site_name" content="AudioWave.app">
 
     <!-- Twitter Card -->
@@ -28,7 +28,7 @@
         "@type": "WebApplication",
         "name": "AudioWave.app",
         "url": "https://audiowave.app",
-        "description": "Real-time audio visualizer with 24 stunning patterns. Stream internet radio from 50+ countries or visualize any browser tab audio.",
+        "description": "Real-time audio visualizer with 24 stunning patterns. Stream internet radio from 50+ countries, use your microphone, or visualize any browser tab audio.",
         "applicationCategory": "MultimediaApplication",
         "operatingSystem": "Any",
         "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -38,7 +38,6 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-GFSBB21QCB"></script>
@@ -62,80 +61,126 @@
             <div class="logo" aria-label="AudioWave App">AUDIOWAVE.APP</div>
             <div class="audio-source-buttons">
                 <button id="radio-btn" aria-label="Open radio tuner" class="source-btn active">Radio</button>
+                <button id="mic-btn" aria-label="Use microphone" class="source-btn">Mic</button>
                 <button id="capture-btn" aria-label="Start audio capture" aria-pressed="false" class="source-btn">Tab Audio</button>
+            </div>
+        </div>
+
+        <!-- Now Playing Bar -->
+        <div id="now-playing" role="status" aria-live="polite">
+            <div class="np-visualizer">
+                <div class="np-bar"></div>
+                <div class="np-bar"></div>
+                <div class="np-bar"></div>
+                <div class="np-bar"></div>
+            </div>
+            <div class="np-info">
+                <span id="np-name">Not Playing</span>
+                <span id="np-genre"></span>
+            </div>
+            <div class="np-controls">
+                <button class="np-btn" id="np-prev" aria-label="Previous">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+                </button>
+                <button class="np-btn" id="np-play" aria-label="Play/Pause">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                </button>
+                <button class="np-btn" id="np-next" aria-label="Next">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+                </button>
             </div>
         </div>
 
         <!-- Radio Tuner Panel -->
         <div id="radio-panel" class="radio-panel visible">
             <div class="radio-header">
-                <span class="radio-title">Radio Stations</span>
+                <span class="radio-title">Radio</span>
                 <button id="radio-close" class="radio-close" aria-label="Close radio">&times;</button>
             </div>
 
-            <!-- Location Selectors -->
-            <div class="location-selectors">
-                <div class="selector-group">
-                    <label for="country-select">Country</label>
-                    <div class="styled-select">
-                        <select id="country-select" aria-label="Select country">
-                            <option value="US">United States</option>
-                        </select>
+            <!-- Tabs: Stations | Favorites -->
+            <div class="radio-tabs">
+                <button class="radio-tab active" data-tab="stations">Stations</button>
+                <button class="radio-tab" data-tab="favorites">Favorites</button>
+            </div>
+
+            <!-- Stations Tab Content -->
+            <div id="stations-tab-content">
+                <!-- Station Search -->
+                <div class="station-search">
+                    <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    <input type="text" id="station-search" placeholder="Search all stations..." aria-label="Search stations">
+                </div>
+
+                <!-- Location Selectors -->
+                <div class="location-selectors">
+                    <div class="selector-group">
+                        <label for="country-select">Country</label>
+                        <div class="styled-select">
+                            <select id="country-select" aria-label="Select country">
+                                <option value="US">United States</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="selector-group">
+                        <label for="genre-select">Genre</label>
+                        <div class="styled-select">
+                            <select id="genre-select" aria-label="Select genre">
+                                <option value="">All Genres</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
-                <div class="selector-group">
-                    <label for="genre-select">Genre</label>
-                    <div class="styled-select">
-                        <select id="genre-select" aria-label="Select genre">
-                            <option value="">All Genres</option>
-                        </select>
+
+                <div class="station-info">
+                    <div id="station-name">Select a station</div>
+                    <div id="station-genre"></div>
+                </div>
+
+                <div class="radio-controls">
+                    <button id="prev-station" class="radio-nav-btn" aria-label="Previous station">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+                    </button>
+                    <button id="play-radio" class="radio-play-btn" aria-label="Play radio">
+                        <svg id="play-icon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                        <svg id="pause-icon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                    </button>
+                    <button id="next-station" class="radio-nav-btn" aria-label="Next station">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+                    </button>
+                </div>
+
+                <div class="radio-volume">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                    <input type="range" id="radio-volume" min="0" max="1" step="0.05" value="0.7" aria-label="Volume">
+                </div>
+
+                <div class="station-list-section">
+                    <div class="station-list-header">
+                        <span id="station-list-title">Stations</span>
+                        <button id="refresh-stations" class="refresh-btn" aria-label="Refresh stations">&#x21BB;</button>
+                    </div>
+                    <div id="station-list" class="station-list"></div>
+                </div>
+
+                <div class="custom-url-section">
+                    <div class="control-label">Custom Stream URL</div>
+                    <div class="custom-url-input">
+                        <input type="text" id="custom-url" placeholder="https://stream.url/path" aria-label="Custom stream URL">
+                        <button id="play-custom">Play</button>
                     </div>
                 </div>
             </div>
 
-            <div class="station-info">
-                <div id="station-name">Select a station</div>
-                <div id="station-genre"></div>
-            </div>
-
-            <div class="radio-controls">
-                <button id="prev-station" class="radio-nav-btn" aria-label="Previous station">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
-                </button>
-                <button id="play-radio" class="radio-play-btn" aria-label="Play radio">
-                    <svg id="play-icon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                    <svg id="pause-icon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                </button>
-                <button id="next-station" class="radio-nav-btn" aria-label="Next station">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
-                </button>
-            </div>
-
-            <div class="radio-volume">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-                <input type="range" id="radio-volume" min="0" max="1" step="0.05" value="0.7" aria-label="Volume">
-            </div>
-
-            <div class="station-list-section">
-                <div class="station-list-header">
-                    <span id="station-list-title">Stations</span>
-                    <button id="refresh-stations" class="refresh-btn" aria-label="Refresh stations">↻</button>
-                </div>
-                <div id="station-list" class="station-list"></div>
-            </div>
-
-            <div class="custom-url-section">
-                <div class="control-label">Custom Stream URL</div>
-                <div class="custom-url-input">
-                    <input type="text" id="custom-url" placeholder="https://stream.url/path" aria-label="Custom stream URL">
-                    <button id="play-custom">Play</button>
-                </div>
+            <!-- Favorites Tab Content -->
+            <div id="favorites-tab-content" style="display:none;">
+                <div id="favorites-list"></div>
             </div>
         </div>
 
         <!-- Control Panel -->
         <div id="control-panel" role="region" aria-label="Visualization controls">
-            <div class="panel-icon" aria-hidden="true">⚙</div>
+            <div class="panel-icon" aria-hidden="true">&#9881;</div>
 
             <div class="control-section patterns">
                 <div class="control-label">Pattern</div>
@@ -212,9 +257,35 @@
                 <div class="slider-container">
                     <div class="slider-header">
                         <span class="slider-label">Hue</span>
-                        <span class="slider-value" id="hue-value">0°</span>
+                        <span class="slider-value" id="hue-value">0&deg;</span>
                     </div>
                     <input type="range" id="hue-shift" min="0" max="360" step="1" value="0" aria-label="Color hue">
+                </div>
+            </div>
+
+            <!-- Theme Section -->
+            <div class="control-section full-width" id="theme-section">
+                <div class="control-label">Theme</div>
+                <div class="theme-grid">
+                    <button class="theme-btn active" data-theme="neon">
+                        <span class="theme-dot" style="background:#00ffcc"></span>Neon
+                    </button>
+                    <button class="theme-btn" data-theme="sunset">
+                        <span class="theme-dot" style="background:#ff6b35"></span>Sunset
+                    </button>
+                    <button class="theme-btn" data-theme="synthwave">
+                        <span class="theme-dot" style="background:#ff00ff"></span>Synth
+                    </button>
+                    <button class="theme-btn" data-theme="mono">
+                        <span class="theme-dot" style="background:#ffffff"></span>Mono
+                    </button>
+                    <button class="theme-btn" data-theme="aurora">
+                        <span class="theme-dot" style="background:#00ff88"></span>Aurora
+                    </button>
+                </div>
+                <div class="accent-picker-row">
+                    <label for="accent-color">Custom</label>
+                    <input type="color" id="accent-color" value="#00ffcc" aria-label="Custom accent color">
                 </div>
             </div>
 
@@ -226,6 +297,10 @@
                     <button class="preset-btn" data-preset="3" aria-label="Load preset 3">3</button>
                     <button class="preset-btn save-preset-btn" data-save aria-label="Save current settings">Save</button>
                 </div>
+            </div>
+
+            <div class="auto-cycle-row">
+                <button id="auto-cycle-btn" aria-label="Auto-cycle patterns">Auto Cycle</button>
             </div>
 
             <button class="hide-ui-btn" id="hide-ui" aria-label="Hide interface">Hide UI [H]</button>
@@ -252,11 +327,12 @@
             <h2>AudioWave.app</h2>
             <div class="help-section">
                 <h3>Getting Started</h3>
-                <p><strong>Radio:</strong> Browse stations by country, region, or genre. Click a station to start playing.</p>
+                <p><strong>Radio:</strong> Browse stations by country, genre, or search by name. Click a station to start playing. Heart stations to save them as favorites.</p>
+                <p><strong>Microphone:</strong> Tap the Mic button to visualize live audio from your microphone. Works on mobile and desktop.</p>
                 <p><strong>Tab Audio:</strong> Capture audio from any browser tab (desktop only). Select the tab playing audio when prompted.</p>
             </div>
             <!-- AdSense: In-Help Ad -->
-            <div style="margin:16px 0;">
+            <div style="margin:14px 0;">
                 <ins class="adsbygoogle"
                     style="display:block"
                     data-ad-client="ca-pub-2337547089019763"
@@ -271,11 +347,21 @@
                     <div class="shortcut"><kbd>H</kbd><span>Toggle UI visibility</span></div>
                     <div class="shortcut"><kbd>F</kbd><span>Toggle fullscreen</span></div>
                     <div class="shortcut"><kbd>Space</kbd><span>Play / Pause radio</span></div>
-                    <div class="shortcut"><kbd>←</kbd><span>Previous station</span></div>
-                    <div class="shortcut"><kbd>→</kbd><span>Next station</span></div>
+                    <div class="shortcut"><kbd>M</kbd><span>Toggle microphone</span></div>
+                    <div class="shortcut"><kbd>&larr;</kbd><span>Previous station</span></div>
+                    <div class="shortcut"><kbd>&rarr;</kbd><span>Next station</span></div>
                     <div class="shortcut"><kbd>1-9</kbd><span>Switch patterns</span></div>
                     <div class="shortcut"><kbd>?</kbd><span>Toggle this help</span></div>
                 </div>
+            </div>
+
+            <div class="help-section">
+                <h3>Mobile</h3>
+                <p>Swipe left/right on the visualization to cycle through patterns.</p>
+            </div>
+
+            <div class="help-section">
+                <button class="restart-tour-btn" id="restart-tour">Restart Welcome Tour</button>
             </div>
         </div>
     </div>
@@ -290,1060 +376,27 @@
             data-full-width-responsive="true"></ins>
     </div>
 
-    <!-- Radio Module -->
+    <!-- Modules -->
+    <script src="js/patterns.js"></script>
+    <script src="js/themes.js"></script>
     <script src="js/radio.js"></script>
+    <script src="js/mic.js"></script>
+    <script src="js/favorites.js"></script>
+    <script src="js/gestures.js"></script>
+    <script src="js/onboarding.js"></script>
 
-    <!-- Main Application Script -->
+    <!-- Main Application -->
+    <script src="js/app.js"></script>
+
+    <!-- Restart tour button handler -->
     <script>
-        // Check for reduced motion preference
-        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-        // Configuration
-        const config = {
-            pattern: 'bars',
-            amplitude: 1,
-            glow: prefersReducedMotion ? 5 : 15,
-            smoothing: prefersReducedMotion ? 0.95 : 0.8,
-            speed: prefersReducedMotion ? 0.3 : 1,
-            colorMode: 'rainbow',
-            hueShift: 0
-        };
-
-        // Restore saved settings
-        try {
-            const saved = JSON.parse(localStorage.getItem('audiowave-config'));
-            if (saved) Object.assign(config, saved);
-        } catch (e) {}
-
-        // Auto-save settings on change (debounced)
-        let saveTimeout;
-        function saveConfig() {
-            clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(() => {
-                try {
-                    localStorage.setItem('audiowave-config', JSON.stringify(config));
-                } catch (e) {}
-            }, 500);
-        }
-
-        // Make config global for radio module
-        window.config = config;
-
-        // Browser support detection
-        const browserSupport = {
-            getDisplayMedia: !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia)
-        };
-
-        // Audio variables (global for radio module access)
-        let audioContext, analyser, dataArray, bufferLength;
-        let mediaStream = null;
-        window.animationId = null;
-
-        // Canvas setup with optimization hints
-        const canvas = document.getElementById('visualizer-canvas');
-        const ctx = canvas.getContext('2d', {
-            alpha: false,           // No transparency needed, improves performance
-            desynchronized: true    // Reduce latency by bypassing compositor
-        });
-        let width, height;
-        let time = 0;
-        let hue = 0;
-
-        let resizeTimeout;
-        function resize() {
-            const dpr = window.devicePixelRatio || 1;
-            canvas.width = window.innerWidth * dpr;
-            canvas.height = window.innerHeight * dpr;
-            // Reset transform before scaling to prevent cumulative scaling
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
-            ctx.scale(dpr, dpr);
-            width = window.innerWidth;
-            height = window.innerHeight;
-        }
-        resize();
-        // Throttle resize handler to prevent performance issues
-        window.addEventListener('resize', () => {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(resize, 100);
-        });
-
-        // DOM elements
-        const captureBtn = document.getElementById('capture-btn');
-        const radioBtn = document.getElementById('radio-btn');
-        const radioPanel = document.getElementById('radio-panel');
-        const radioClose = document.getElementById('radio-close');
-        const helpToggle = document.getElementById('help-toggle');
-        const helpOverlay = document.getElementById('help-overlay');
-        const helpClose = document.getElementById('help-close');
-        const fullscreenToggle = document.getElementById('fullscreen-toggle');
-        const hideUiBtn = document.getElementById('hide-ui');
-        const controlPanel = document.getElementById('control-panel');
-        const patternBtns = document.querySelectorAll('.pattern-btn');
-        const colorModeBtns = document.querySelectorAll('.color-mode-btn');
-        const presetBtns = document.querySelectorAll('.preset-btn');
-
-        // Radio panel toggle
-        radioBtn.addEventListener('click', () => {
-            const isActive = radioBtn.classList.contains('active');
-            if (isActive) {
-                radioPanel.classList.remove('visible');
-                radioBtn.classList.remove('active');
-            } else {
-                radioPanel.classList.add('visible');
-                radioBtn.classList.add('active');
+        document.getElementById('restart-tour')?.addEventListener('click', () => {
+            if (window.AudioWaveOnboarding) {
+                window.AudioWaveOnboarding.reset();
+                document.getElementById('help-overlay').classList.remove('visible');
+                setTimeout(() => window.AudioWaveOnboarding.start(), 300);
             }
         });
-
-        radioClose.addEventListener('click', () => {
-            radioPanel.classList.remove('visible');
-            radioBtn.classList.remove('active');
-        });
-
-        // Tab Audio capture
-        captureBtn.addEventListener('click', async () => {
-            if (mediaStream) {
-                stopCapture();
-                return;
-            }
-
-            if (!browserSupport.getDisplayMedia) {
-                document.getElementById('status-text').textContent = 'Tab audio not supported in this browser';
-                return;
-            }
-
-            try {
-                // Stop radio if playing
-                if (window.radioModule) {
-                    window.radioModule.stopRadio();
-                }
-
-                mediaStream = await navigator.mediaDevices.getDisplayMedia({
-                    video: true,
-                    audio: true
-                });
-
-                const audioTrack = mediaStream.getAudioTracks()[0];
-                if (!audioTrack) {
-                    throw new Error('No audio track - select a tab with audio');
-                }
-
-                // Stop video track
-                mediaStream.getVideoTracks().forEach(track => track.stop());
-
-                // Create audio context
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const source = audioContext.createMediaStreamSource(new MediaStream([audioTrack]));
-
-                analyser = audioContext.createAnalyser();
-                analyser.fftSize = 2048;
-                analyser.smoothingTimeConstant = config.smoothing;
-
-                source.connect(analyser);
-                bufferLength = analyser.frequencyBinCount;
-                dataArray = new Uint8Array(bufferLength);
-
-                // Make available globally
-                window.audioContext = audioContext;
-                window.analyser = analyser;
-                window.bufferLength = bufferLength;
-                window.dataArray = dataArray;
-
-                captureBtn.classList.add('active');
-                captureBtn.textContent = 'Stop';
-                document.getElementById('status-indicator').classList.add('active');
-                document.getElementById('status-text').textContent = 'Capturing tab audio';
-
-                radioPanel.classList.remove('visible');
-                radioBtn.classList.remove('active');
-
-                visualize();
-
-                audioTrack.onended = stopCapture;
-
-            } catch (error) {
-                console.error('Capture failed:', error);
-                // Clean up any partial state
-                if (mediaStream) {
-                    mediaStream.getTracks().forEach(track => track.stop());
-                    mediaStream = null;
-                }
-                captureBtn.classList.remove('active');
-                captureBtn.textContent = 'Tab Audio';
-                document.getElementById('status-indicator').classList.remove('active');
-                document.getElementById('status-text').textContent = error.message || 'Capture failed';
-            }
-        });
-
-        function stopCapture() {
-            if (mediaStream) {
-                mediaStream.getTracks().forEach(track => track.stop());
-                mediaStream = null;
-            }
-
-            // Clean up audio context resources to prevent memory leaks
-            if (audioContext && !window.radioModule?.radioState?.isPlaying) {
-                // Don't close if radio might still use it, just disconnect analyser
-                if (analyser) {
-                    try {
-                        analyser.disconnect();
-                    } catch (e) {}
-                }
-            }
-
-            captureBtn.classList.remove('active');
-            captureBtn.textContent = 'Tab Audio';
-            document.getElementById('status-indicator').classList.remove('active');
-            document.getElementById('status-text').textContent = 'Capture stopped';
-
-            if (window.animationId && !window.radioModule?.radioState?.isPlaying) {
-                cancelAnimationFrame(window.animationId);
-                window.animationId = null;
-            }
-        }
-
-        // Pattern selection
-        patternBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                patternBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                config.pattern = btn.dataset.pattern;
-                saveConfig();
-            });
-        });
-
-        // Color mode
-        colorModeBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                colorModeBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                config.colorMode = btn.dataset.mode;
-                saveConfig();
-            });
-        });
-
-        // Sliders
-        const sliders = {
-            'amplitude': (v) => { config.amplitude = v; document.getElementById('amplitude-value').textContent = Math.round(v * 100) + '%'; saveConfig(); },
-            'glow': (v) => { config.glow = v; document.getElementById('glow-value').textContent = v; saveConfig(); },
-            'smoothing': (v) => { config.smoothing = v; if (analyser) analyser.smoothingTimeConstant = v; document.getElementById('smoothing-value').textContent = v.toFixed(2); saveConfig(); },
-            'speed': (v) => { config.speed = v; document.getElementById('speed-value').textContent = v.toFixed(1) + 'x'; saveConfig(); },
-            'hue-shift': (v) => { config.hueShift = v; document.getElementById('hue-value').textContent = v + '°'; saveConfig(); }
-        };
-
-        Object.keys(sliders).forEach(id => {
-            const slider = document.getElementById(id);
-            if (slider) {
-                slider.addEventListener('input', (e) => sliders[id](parseFloat(e.target.value)));
-            }
-        });
-
-        // Presets
-        const savedPresets = JSON.parse(localStorage.getItem('audiowave-presets') || '{}');
-        let currentPresetSlot = null;
-
-        presetBtns.forEach(btn => {
-            if (btn.dataset.save !== undefined) {
-                btn.addEventListener('click', () => {
-                    if (currentPresetSlot) {
-                        savedPresets[currentPresetSlot] = { ...config };
-                        localStorage.setItem('audiowave-presets', JSON.stringify(savedPresets));
-                        presetBtns.forEach(b => {
-                            if (b.dataset.preset === currentPresetSlot) b.classList.add('has-preset');
-                        });
-                        btn.classList.add('saving');
-                        setTimeout(() => btn.classList.remove('saving'), 500);
-                    }
-                });
-            } else {
-                const preset = btn.dataset.preset;
-                if (savedPresets[preset]) btn.classList.add('has-preset');
-
-                btn.addEventListener('click', () => {
-                    presetBtns.forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    currentPresetSlot = preset;
-
-                    if (savedPresets[preset]) {
-                        Object.assign(config, savedPresets[preset]);
-                        updateUIFromConfig();
-                    }
-                });
-            }
-        });
-
-        function updateUIFromConfig() {
-            patternBtns.forEach(b => b.classList.toggle('active', b.dataset.pattern === config.pattern));
-            colorModeBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === config.colorMode));
-
-            document.getElementById('amplitude').value = config.amplitude;
-            document.getElementById('glow').value = config.glow;
-            document.getElementById('smoothing').value = config.smoothing;
-            document.getElementById('speed').value = config.speed;
-            document.getElementById('hue-shift').value = config.hueShift;
-
-            Object.keys(sliders).forEach(id => {
-                const slider = document.getElementById(id);
-                if (slider) sliders[id](parseFloat(slider.value));
-            });
-        }
-
-        // UI visibility
-        hideUiBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            document.body.classList.add('hide-ui');
-        });
-        controlPanel.addEventListener('click', (e) => {
-            if (document.body.classList.contains('hide-ui')) {
-                document.body.classList.remove('hide-ui');
-            }
-        });
-
-        // Help
-        helpToggle.addEventListener('click', () => {
-            helpOverlay.classList.add('visible');
-            helpOverlay.setAttribute('aria-hidden', 'false');
-        });
-        helpClose.addEventListener('click', () => {
-            helpOverlay.classList.remove('visible');
-            helpOverlay.setAttribute('aria-hidden', 'true');
-        });
-        helpOverlay.addEventListener('click', (e) => {
-            if (e.target === helpOverlay) {
-                helpOverlay.classList.remove('visible');
-                helpOverlay.setAttribute('aria-hidden', 'true');
-            }
-        });
-
-        // Fullscreen
-        fullscreenToggle.addEventListener('click', () => {
-            if (document.fullscreenElement) {
-                document.exitFullscreen();
-            } else {
-                document.documentElement.requestFullscreen();
-            }
-        });
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            if (e.target.tagName === 'INPUT') return;
-
-            switch(e.key.toLowerCase()) {
-                case 'h':
-                    document.body.classList.toggle('hide-ui');
-                    break;
-                case 'f':
-                    fullscreenToggle.click();
-                    break;
-                case ' ':
-                    e.preventDefault();
-                    document.getElementById('play-radio')?.click();
-                    break;
-                case 'arrowleft':
-                    window.radioModule?.prevStation();
-                    break;
-                case 'arrowright':
-                    window.radioModule?.nextStation();
-                    break;
-                case '?':
-                    helpOverlay.classList.toggle('visible');
-                    break;
-                default:
-                    if (e.key >= '1' && e.key <= '9') {
-                        const index = parseInt(e.key) - 1;
-                        if (patternBtns[index]) patternBtns[index].click();
-                    }
-            }
-        });
-
-        // Restore UI from saved config
-        updateUIFromConfig();
-
-        // Initialize radio panel - open by default
-        radioPanel.classList.add('visible');
-        radioBtn.classList.add('active');
-
-        // Hide tab audio button on mobile (not supported)
-        if (!browserSupport.getDisplayMedia) {
-            captureBtn.style.display = 'none';
-        }
-
-        // Color functions
-        function getColor(index, total) {
-            if (config.colorMode === 'rainbow') {
-                const baseHue = (hue + (index / total) * 360 + config.hueShift) % 360;
-                return `hsl(${baseHue}, 100%, 60%)`;
-            } else {
-                return `hsl(${config.hueShift}, 100%, 60%)`;
-            }
-        }
-
-        // Pattern lookup table (defined once for performance)
-        const patterns = {
-            bars: () => drawBars(),
-            wave: () => drawWave(),
-            circular: () => drawCircular(),
-            spectrum: () => drawSpectrum(),
-            radial: () => drawRadial(),
-            particles: () => drawParticles(),
-            rings: () => drawRings(),
-            dna: () => drawDNA(),
-            spiral: () => drawSpiral(),
-            grid: () => drawGrid(),
-            tunnel: () => drawTunnel(),
-            plasma: () => drawPlasma(),
-            fractal: () => drawFractal(),
-            mandala: () => drawMandala(),
-            galaxy: () => drawGalaxy(),
-            vortex: () => drawVortex(),
-            kaleidoscope: () => drawKaleidoscope(),
-            matrix: () => drawMatrix(),
-            nebula: () => drawNebula(),
-            helix: () => drawHelix(),
-            petals: () => drawPetals(),
-            crystals: () => drawCrystals(),
-            fireworks: () => drawFireworks(),
-            lightning: () => drawLightning()
-        };
-
-        // Make visualize function global for radio module
-        window.visualize = visualize;
-
-        // Visualization loop
-        function visualize() {
-            window.animationId = requestAnimationFrame(visualize);
-
-            // Sync with window variables (set by radio module)
-            if (window.analyser) analyser = window.analyser;
-            if (window.dataArray) dataArray = window.dataArray;
-            if (window.bufferLength) bufferLength = window.bufferLength;
-
-            if (!analyser || !dataArray) return;
-
-            analyser.getByteFrequencyData(dataArray);
-
-            time += 0.016 * config.speed;
-            hue = (hue + 0.5 * config.speed) % 360;
-
-            const patternFn = patterns[config.pattern];
-            if (patternFn) {
-                patternFn();
-            }
-        }
-
-        // Pattern functions
-        function drawBars() {
-            ctx.fillStyle = 'rgba(10, 10, 15, 0.2)';
-            ctx.fillRect(0, 0, width, height);
-            const barWidth = (width / bufferLength) * 2.5;
-            let x = 0;
-            for (let i = 0; i < bufferLength; i++) {
-                const barHeight = (dataArray[i] / 255) * height * config.amplitude * 0.8;
-                const color = getColor(i, bufferLength);
-                ctx.fillStyle = color;
-                ctx.shadowBlur = config.glow;
-                ctx.shadowColor = color;
-                ctx.fillRect(x, height - barHeight, barWidth - 2, barHeight);
-                x += barWidth;
-            }
-            ctx.shadowBlur = 0;
-        }
-
-        function drawWave() {
-            analyser.getByteTimeDomainData(dataArray);
-            ctx.fillStyle = 'rgba(10, 10, 15, 0.15)';
-            ctx.fillRect(0, 0, width, height);
-            ctx.lineWidth = 3;
-            ctx.shadowBlur = config.glow;
-            for (let layer = 0; layer < 3; layer++) {
-                const color = getColor(layer * 100, 300);
-                ctx.strokeStyle = color;
-                ctx.shadowColor = color;
-                ctx.beginPath();
-                const sliceWidth = width / bufferLength;
-                let x = 0;
-                for (let i = 0; i < bufferLength; i++) {
-                    const v = dataArray[i] / 128.0;
-                    const y = (v * height / 2) + (layer * 40 - 40);
-                    if (i === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
-                    x += sliceWidth;
-                }
-                ctx.stroke();
-            }
-            ctx.shadowBlur = 0;
-        }
-
-        function drawCircular() {
-            ctx.fillStyle = 'rgba(10, 10, 15, 0.1)';
-            ctx.fillRect(0, 0, width, height);
-            const centerX = width / 2, centerY = height / 2;
-            const radius = Math.min(width, height) / 4;
-            ctx.shadowBlur = config.glow;
-            for (let i = 0; i < bufferLength; i++) {
-                const angle = (i / bufferLength) * Math.PI * 2;
-                const amp = (dataArray[i] / 255) * radius * config.amplitude;
-                const x = centerX + Math.cos(angle) * (radius + amp);
-                const y = centerY + Math.sin(angle) * (radius + amp);
-                const color = getColor(i, bufferLength);
-                ctx.fillStyle = color;
-                ctx.shadowColor = color;
-                ctx.beginPath();
-                ctx.arc(x, y, 2 + amp / 20, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            ctx.shadowBlur = 0;
-        }
-
-        function drawSpectrum() {
-            ctx.fillStyle = 'rgba(10, 10, 15, 0.2)';
-            ctx.fillRect(0, 0, width, height);
-            const centerX = width / 2, centerY = height / 2;
-            const maxRadius = Math.min(width, height) / 2.5;
-            ctx.lineWidth = 2;
-            ctx.shadowBlur = config.glow;
-            for (let i = 0; i < bufferLength; i += 2) {
-                const angle = (i / bufferLength) * Math.PI * 2;
-                const barHeight = (dataArray[i] / 255) * maxRadius * config.amplitude;
-                const x1 = centerX + Math.cos(angle) * (maxRadius * 0.3);
-                const y1 = centerY + Math.sin(angle) * (maxRadius * 0.3);
-                const x2 = centerX + Math.cos(angle) * (maxRadius * 0.3 + barHeight);
-                const y2 = centerY + Math.sin(angle) * (maxRadius * 0.3 + barHeight);
-                const color = getColor(i, bufferLength);
-                ctx.strokeStyle = color;
-                ctx.shadowColor = color;
-                ctx.beginPath();
-                ctx.moveTo(x1, y1);
-                ctx.lineTo(x2, y2);
-                ctx.stroke();
-            }
-            ctx.shadowBlur = 0;
-        }
-
-        function drawRadial() {
-            ctx.fillStyle = 'rgba(10, 10, 15, 0.15)';
-            ctx.fillRect(0, 0, width, height);
-            const centerX = width / 2, centerY = height / 2;
-            ctx.shadowBlur = config.glow;
-            for (let ring = 0; ring < 8; ring++) {
-                const baseRadius = (ring + 1) * 30;
-                const color = getColor(ring * 30, 240);
-                ctx.strokeStyle = color;
-                ctx.shadowColor = color;
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                for (let i = 0; i <= bufferLength; i += 4) {
-                    const angle = (i / bufferLength) * Math.PI * 2;
-                    const amp = (dataArray[i] / 255) * 50 * config.amplitude;
-                    const radius = baseRadius + amp;
-                    const x = centerX + Math.cos(angle) * radius;
-                    const y = centerY + Math.sin(angle) * radius;
-                    if (i === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
-                }
-                ctx.closePath();
-                ctx.stroke();
-            }
-            ctx.shadowBlur = 0;
-        }
-
-        function drawParticles() {
-            ctx.fillStyle = 'rgba(10, 10, 15, 0.08)';
-            ctx.fillRect(0, 0, width, height);
-            ctx.shadowBlur = config.glow;
-            for (let i = 0; i < bufferLength; i += 3) {
-                const x = (i / bufferLength) * width;
-                const y = height / 2 + Math.sin(i * 0.1 + time) * 100;
-                const size = (dataArray[i] / 255) * 20 * config.amplitude;
-                const color = getColor(i, bufferLength);
-                ctx.fillStyle = color;
-                ctx.shadowColor = color;
-                ctx.beginPath();
-                ctx.arc(x, y, size / 2, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            ctx.shadowBlur = 0;
-        }
-
-        function drawRings() {
-            ctx.fillStyle = 'rgba(10, 10, 15, 0.12)';
-            ctx.fillRect(0, 0, width, height);
-            const centerX = width / 2, centerY = height / 2;
-            ctx.lineWidth = 3;
-            ctx.shadowBlur = config.glow;
-            for (let i = 0; i < bufferLength; i += 8) {
-                const radius = (dataArray[i] / 255) * Math.min(width, height) * 0.4 * config.amplitude;
-                const color = getColor(i, bufferLength);
-                ctx.strokeStyle = color;
-                ctx.shadowColor = color;
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-                ctx.stroke();
-            }
-            ctx.shadowBlur = 0;
-        }
-
-        function drawDNA() {
-            ctx.fillStyle = 'rgba(10, 10, 15, 0.15)';
-            ctx.fillRect(0, 0, width, height);
-            ctx.lineWidth = 2;
-            ctx.shadowBlur = config.glow;
-            for (let strand = 0; strand < 2; strand++) {
-                const offset = strand * Math.PI;
-                ctx.beginPath();
-                for (let i = 0; i < bufferLength; i += 2) {
-                    const x = (i / bufferLength) * width;
-                    const amp = (dataArray[i] / 255) * 100 * config.amplitude;
-                    const y = height / 2 + Math.sin(i * 0.05 + time + offset) * amp;
-                    if (i === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
-                }
-                const color = getColor(strand * 150, 300);
-                ctx.strokeStyle = color;
-                ctx.shadowColor = color;
-                ctx.stroke();
-            }
-            ctx.shadowBlur = 0;
-        }
-
-        function drawSpiral() {
-            ctx.fillStyle = 'rgba(10, 10, 15, 0.1)';
-            ctx.fillRect(0, 0, width, height);
-            const centerX = width / 2, centerY = height / 2;
-            ctx.lineWidth = 2;
-            ctx.shadowBlur = config.glow;
-            ctx.beginPath();
-            for (let i = 0; i < bufferLength; i++) {
-                const angle = (i / bufferLength) * Math.PI * 8 + time;
-                const radius = (i / bufferLength) * Math.min(width, height) / 2;
-                const amp = (dataArray[i] / 255) * 50 * config.amplitude;
-                const x = centerX + Math.cos(angle) * (radius + amp);
-                const y = centerY + Math.sin(angle) * (radius + amp);
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            }
-            const color = getColor(0, 1);
-            ctx.strokeStyle = color;
-            ctx.shadowColor = color;
-            ctx.stroke();
-            ctx.shadowBlur = 0;
-        }
-
-        function drawGrid() {
-            ctx.fillStyle = 'rgba(10, 10, 15, 0.2)';
-            ctx.fillRect(0, 0, width, height);
-            const cols = 20, rows = 15;
-            const cellWidth = width / cols, cellHeight = height / rows;
-            ctx.shadowBlur = config.glow;
-            for (let i = 0; i < cols * rows; i++) {
-                const col = i % cols;
-                const row = Math.floor(i / cols);
-                const dataIndex = Math.floor((i / (cols * rows)) * bufferLength);
-                const x = col * cellWidth, y = row * cellHeight;
-                const brightness = (dataArray[dataIndex] / 255) * config.amplitude;
-                const color = getColor(i, cols * rows);
-                ctx.fillStyle = color;
-                ctx.shadowColor = color;
-                ctx.globalAlpha = brightness;
-                ctx.fillRect(x + 2, y + 2, cellWidth - 4, cellHeight - 4);
-            }
-            ctx.globalAlpha = 1;
-            ctx.shadowBlur = 0;
-        }
-
-        function drawTunnel() {
-            ctx.fillStyle = 'rgba(10, 10, 15, 0.15)';
-            ctx.fillRect(0, 0, width, height);
-            const centerX = width / 2, centerY = height / 2;
-            ctx.shadowBlur = config.glow;
-            for (let layer = 15; layer > 0; layer--) {
-                const layerSize = (layer / 15) * Math.min(width, height) / 2;
-                const dataIndex = Math.floor((layer / 15) * bufferLength);
-                const amp = (dataArray[dataIndex] / 255) * 50 * config.amplitude;
-                const color = getColor(layer * 20, 300);
-                ctx.strokeStyle = color;
-                ctx.shadowColor = color;
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, layerSize + amp, 0, Math.PI * 2);
-                ctx.stroke();
-            }
-            ctx.shadowBlur = 0;
-        }
-
-        function drawPlasma() {
-            ctx.fillStyle = 'rgba(10, 10, 15, 0.05)';
-            ctx.fillRect(0, 0, width, height);
-            const avgFreq = dataArray.reduce((a, b) => a + b, 0) / bufferLength;
-            const intensity = (avgFreq / 255) * config.amplitude;
-            const cellSize = 12; // Increased from 8 for better performance
-            const lightness = 50 + intensity * 30;
-            const alpha = 0.3 + intensity * 0.5;
-            // Pre-calculate time-based sin for optimization
-            const sinTime = Math.sin(time);
-            const cosTime = Math.cos(time);
-            for (let y = 0; y < height; y += cellSize) {
-                const sinY = Math.sin(y * 0.01 + time);
-                for (let x = 0; x < width; x += cellSize) {
-                    // Simplified plasma calculation for better performance
-                    const value1 = Math.sin(x * 0.01 + time);
-                    const value3 = Math.sin((x + y) * 0.008 + time);
-                    const plasma = (value1 + sinY + value3) / 3;
-                    const colorValue = ((plasma + 1) * 180 + hue) % 360;
-                    ctx.fillStyle = `hsla(${colorValue}, 100%, ${lightness}%, ${alpha})`;
-                    ctx.fillRect(x, y, cellSize, cellSize);
-                }
-            }
-        }
-
-        function drawFractal() {
-            ctx.fillStyle = 'rgba(10, 10, 15, 0.1)';
-            ctx.fillRect(0, 0, width, height);
-            const centerX = width / 2, centerY = height / 2;
-            ctx.shadowBlur = config.glow;
-            for (let iteration = 0; iteration < 5; iteration++) {
-                const scale = Math.pow(0.6, iteration);
-                const rotation = time * (iteration + 1) * 0.2;
-                for (let i = 0; i < bufferLength; i += 4) {
-                    const angle = (i / bufferLength) * Math.PI * 2 + rotation;
-                    const radius = (dataArray[i] / 255) * 200 * scale * config.amplitude;
-                    const x = centerX + Math.cos(angle) * radius;
-                    const y = centerY + Math.sin(angle) * radius;
-                    const color = getColor(i + iteration * 50, bufferLength);
-                    ctx.fillStyle = color;
-                    ctx.shadowColor = color;
-                    ctx.beginPath();
-                    ctx.arc(x, y, 3 * scale, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            }
-            ctx.shadowBlur = 0;
-        }
-
-        function drawMandala() {
-            ctx.fillStyle = 'rgba(10, 10, 15, 0.12)';
-            ctx.fillRect(0, 0, width, height);
-            const centerX = width / 2, centerY = height / 2;
-            ctx.shadowBlur = config.glow;
-            for (let petal = 0; petal < 12; petal++) {
-                const petalAngle = (petal / 12) * Math.PI * 2;
-                ctx.beginPath();
-                for (let i = 0; i < bufferLength; i += 3) {
-                    const t = i / bufferLength;
-                    const angle = petalAngle + Math.sin(t * Math.PI * 4 + time) * 0.5;
-                    const radius = (dataArray[i] / 255) * 150 * config.amplitude * (1 - t * 0.5);
-                    const x = centerX + Math.cos(angle) * radius;
-                    const y = centerY + Math.sin(angle) * radius;
-                    if (i === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
-                }
-                const color = getColor(petal * 30, 360);
-                ctx.strokeStyle = color;
-                ctx.shadowColor = color;
-                ctx.lineWidth = 2;
-                ctx.stroke();
-            }
-            ctx.shadowBlur = 0;
-        }
-
-        function drawGalaxy() {
-            ctx.fillStyle = 'rgba(10, 10, 15, 0.08)';
-            ctx.fillRect(0, 0, width, height);
-            const centerX = width / 2, centerY = height / 2;
-            ctx.shadowBlur = config.glow;
-            for (let arm = 0; arm < 4; arm++) {
-                const armAngle = (arm / 4) * Math.PI * 2;
-                for (let i = 0; i < bufferLength; i += 2) {
-                    const t = i / bufferLength;
-                    const spiralAngle = armAngle + t * Math.PI * 4 + time * 0.5;
-                    const radius = t * Math.min(width, height) * 0.4;
-                    const amp = (dataArray[i] / 255) * 50 * config.amplitude;
-                    const x = centerX + Math.cos(spiralAngle) * (radius + amp);
-                    const y = centerY + Math.sin(spiralAngle) * (radius + amp);
-                    const color = getColor(i, bufferLength);
-                    ctx.fillStyle = color;
-                    ctx.shadowColor = color;
-                    const size = (dataArray[i] / 255) * 4 * config.amplitude;
-                    ctx.beginPath();
-                    ctx.arc(x, y, size, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            }
-            ctx.shadowBlur = 0;
-        }
-
-        function drawVortex() {
-            ctx.fillStyle = 'rgba(10, 10, 15, 0.15)';
-            ctx.fillRect(0, 0, width, height);
-            const centerX = width / 2, centerY = height / 2;
-            ctx.lineWidth = 2;
-            ctx.shadowBlur = config.glow;
-            for (let layer = 0; layer < 20; layer++) {
-                ctx.beginPath();
-                for (let i = 0; i < bufferLength; i += 3) {
-                    const angle = (i / bufferLength) * Math.PI * 2 + time + layer * 0.3;
-                    const radiusBase = (layer / 20) * Math.min(width, height) * 0.4;
-                    const amp = (dataArray[i] / 255) * 30 * config.amplitude;
-                    const radius = radiusBase + amp;
-                    const x = centerX + Math.cos(angle) * radius;
-                    const y = centerY + Math.sin(angle) * radius;
-                    if (i === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
-                }
-                ctx.closePath();
-                const color = getColor(layer * 15, 300);
-                ctx.strokeStyle = color;
-                ctx.shadowColor = color;
-                ctx.stroke();
-            }
-            ctx.shadowBlur = 0;
-        }
-
-        function drawKaleidoscope() {
-            ctx.fillStyle = 'rgba(10, 10, 15, 0.1)';
-            ctx.fillRect(0, 0, width, height);
-            const centerX = width / 2, centerY = height / 2;
-            ctx.shadowBlur = config.glow;
-            for (let segment = 0; segment < 8; segment++) {
-                const segmentAngle = (segment / 8) * Math.PI * 2;
-                ctx.save();
-                ctx.translate(centerX, centerY);
-                ctx.rotate(segmentAngle);
-                for (let i = 0; i < bufferLength; i += 4) {
-                    const x = (i / bufferLength) * 200;
-                    const y = Math.sin(i * 0.1 + time) * (dataArray[i] / 255) * 100 * config.amplitude;
-                    const color = getColor(i, bufferLength);
-                    ctx.fillStyle = color;
-                    ctx.shadowColor = color;
-                    ctx.beginPath();
-                    ctx.arc(x, y, 3, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.beginPath();
-                    ctx.arc(x, -y, 3, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                ctx.restore();
-            }
-            ctx.shadowBlur = 0;
-        }
-
-        function drawMatrix() {
-            ctx.fillStyle = 'rgba(10, 10, 15, 0.25)';
-            ctx.fillRect(0, 0, width, height);
-            const cols = 40;
-            const colWidth = width / cols;
-            ctx.shadowBlur = config.glow;
-            ctx.font = '14px JetBrains Mono';
-            for (let col = 0; col < cols; col++) {
-                const dataIndex = Math.floor((col / cols) * bufferLength);
-                const amp = (dataArray[dataIndex] / 255) * config.amplitude;
-                const dropHeight = amp * height;
-                for (let i = 0; i < dropHeight; i += 20) {
-                    const char = String.fromCharCode(0x30A0 + Math.random() * 96);
-                    const x = col * colWidth;
-                    const y = (i + time * 50) % height;
-                    const opacity = 1 - (i / dropHeight);
-                    const color = getColor(col, cols);
-                    ctx.fillStyle = color.replace('hsl(', 'hsla(').replace('60%)', `60%, ${opacity})`);
-                    ctx.shadowColor = color;
-                    ctx.fillText(char, x, y);
-                }
-            }
-            ctx.shadowBlur = 0;
-        }
-
-        function drawNebula() {
-            ctx.fillStyle = 'rgba(10, 10, 15, 0.06)';
-            ctx.fillRect(0, 0, width, height);
-            const centerX = width / 2, centerY = height / 2;
-            const maxRadius = Math.min(width, height) / 2;
-            ctx.shadowBlur = config.glow * 2;
-            for (let i = 0; i < bufferLength; i += 2) {
-                const angle = (i / bufferLength) * Math.PI * 4 + time * 0.5;
-                const baseDistance = (i / bufferLength) * maxRadius * 0.8;
-                const amp = (dataArray[i] / 255) * config.amplitude;
-                const distance = baseDistance + amp * 50;
-                const x = centerX + Math.cos(angle) * distance;
-                const y = centerY + Math.sin(angle) * distance;
-                const size = amp * 15 + 2;
-                const color = getColor(i, bufferLength);
-                const gradient = ctx.createRadialGradient(x, y, 0, x, y, size);
-                gradient.addColorStop(0, color);
-                gradient.addColorStop(1, 'transparent');
-                ctx.fillStyle = gradient;
-                ctx.shadowColor = color;
-                ctx.beginPath();
-                ctx.arc(x, y, size, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            ctx.shadowBlur = 0;
-        }
-
-        function drawHelix() {
-            ctx.fillStyle = 'rgba(10, 10, 15, 0.12)';
-            ctx.fillRect(0, 0, width, height);
-            ctx.shadowBlur = config.glow;
-            for (let strand = 0; strand < 3; strand++) {
-                const offset = (strand / 3) * Math.PI * 2;
-                ctx.beginPath();
-                for (let i = 0; i < bufferLength; i += 2) {
-                    const t = i / bufferLength;
-                    const x = t * width;
-                    const angle = t * Math.PI * 6 + time + offset;
-                    const amp = (dataArray[i] / 255) * 80 * config.amplitude;
-                    const y = height / 2 + Math.sin(angle) * amp + Math.cos(t * Math.PI * 2) * 50;
-                    if (i === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
-                }
-                const color = getColor(strand * 100, 300);
-                ctx.strokeStyle = color;
-                ctx.shadowColor = color;
-                ctx.lineWidth = 3;
-                ctx.stroke();
-            }
-            ctx.shadowBlur = 0;
-        }
-
-        function drawPetals() {
-            ctx.fillStyle = 'rgba(10, 10, 15, 0.1)';
-            ctx.fillRect(0, 0, width, height);
-            const centerX = width / 2, centerY = height / 2;
-            ctx.shadowBlur = config.glow;
-            for (let petal = 0; petal < 16; petal++) {
-                const petalAngle = (petal / 16) * Math.PI * 2 + time * 0.5;
-                const dataIndex = Math.floor((petal / 16) * bufferLength);
-                const amp = (dataArray[dataIndex] / 255) * config.amplitude;
-                ctx.save();
-                ctx.translate(centerX, centerY);
-                ctx.rotate(petalAngle);
-                const petalLength = 100 + amp * 100;
-                const petalWidth = 30 + amp * 20;
-                const color = getColor(petal, 16);
-                ctx.fillStyle = color;
-                ctx.shadowColor = color;
-                ctx.beginPath();
-                ctx.ellipse(petalLength / 2, 0, petalLength / 2, petalWidth / 2, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.restore();
-            }
-            ctx.shadowBlur = 0;
-        }
-
-        function drawCrystals() {
-            ctx.fillStyle = 'rgba(10, 10, 15, 0.15)';
-            ctx.fillRect(0, 0, width, height);
-            const centerX = width / 2, centerY = height / 2;
-            ctx.shadowBlur = config.glow;
-            ctx.lineWidth = 2;
-            for (let i = 0; i < 12; i++) {
-                const angle = (i / 12) * Math.PI * 2 + time * 0.3;
-                const dataIndex = Math.floor((i / 12) * bufferLength);
-                const amp = (dataArray[dataIndex] / 255) * config.amplitude;
-                const distance = 100 + amp * 150;
-                const x = centerX + Math.cos(angle) * distance;
-                const y = centerY + Math.sin(angle) * distance;
-                const size = 20 + amp * 30;
-                const color = getColor(i, 12);
-                ctx.strokeStyle = color;
-                ctx.shadowColor = color;
-                ctx.beginPath();
-                for (let v = 0; v < 6; v++) {
-                    const va = (v / 6) * Math.PI * 2;
-                    const vx = x + Math.cos(va) * size;
-                    const vy = y + Math.sin(va) * size;
-                    if (v === 0) ctx.moveTo(vx, vy);
-                    else ctx.lineTo(vx, vy);
-                }
-                ctx.closePath();
-                ctx.stroke();
-                for (let v = 0; v < 6; v++) {
-                    const va = (v / 6) * Math.PI * 2;
-                    ctx.beginPath();
-                    ctx.moveTo(x, y);
-                    ctx.lineTo(x + Math.cos(va) * size, y + Math.sin(va) * size);
-                    ctx.stroke();
-                }
-            }
-            ctx.shadowBlur = 0;
-        }
-
-        function drawFireworks() {
-            ctx.fillStyle = 'rgba(10, 10, 15, 0.1)';
-            ctx.fillRect(0, 0, width, height);
-            ctx.shadowBlur = config.glow;
-            for (let burst = 0; burst < 8; burst++) {
-                const dataIndex = Math.floor((burst / 8) * bufferLength);
-                const amp = (dataArray[dataIndex] / 255) * config.amplitude;
-                if (amp > 0.3) {
-                    const x = ((burst + 0.5) / 8) * width;
-                    const y = height * 0.3 + Math.sin(time + burst) * 50 + (1 - amp) * 100;
-                    const color = getColor(burst * 30, 240);
-                    ctx.fillStyle = color;
-                    ctx.shadowColor = color;
-                    const burstRadius = amp * 80 + 20;
-                    for (let p = 0; p < 24; p++) {
-                        const pa = (p / 24) * Math.PI * 2;
-                        const dist = burstRadius * (0.5 + amp * 0.5);
-                        const px = x + Math.cos(pa) * dist;
-                        const py = y + Math.sin(pa) * dist;
-                        ctx.beginPath();
-                        ctx.arc(px, py, 2 + amp * 2, 0, Math.PI * 2);
-                        ctx.fill();
-                        ctx.beginPath();
-                        ctx.moveTo(x, y);
-                        ctx.lineTo(px, py);
-                        ctx.strokeStyle = color;
-                        ctx.lineWidth = 1;
-                        ctx.stroke();
-                    }
-                }
-            }
-            ctx.shadowBlur = 0;
-        }
-
-        function drawLightning() {
-            ctx.fillStyle = 'rgba(10, 10, 15, 0.2)';
-            ctx.fillRect(0, 0, width, height);
-            ctx.shadowBlur = config.glow * 1.5;
-            ctx.lineWidth = 3;
-            for (let bolt = 0; bolt < 5; bolt++) {
-                const dataIndex = Math.floor((bolt / 5) * bufferLength);
-                const amp = (dataArray[dataIndex] / 255) * config.amplitude;
-                if (amp > 0.3) {
-                    const startX = (bolt / 5) * width + width / 10;
-                    let currentX = startX, currentY = 0;
-                    const color = getColor(bolt * 50, 250);
-                    ctx.strokeStyle = color;
-                    ctx.shadowColor = color;
-                    ctx.beginPath();
-                    ctx.moveTo(currentX, currentY);
-                    for (let seg = 0; seg < 15; seg++) {
-                        currentX += (Math.random() - 0.5) * 60 * amp;
-                        currentY += (height / 15) + (Math.random() - 0.5) * 20;
-                        ctx.lineTo(currentX, currentY);
-                        if (Math.random() > 0.7) {
-                            const branchX = currentX + (Math.random() - 0.5) * 40 * amp;
-                            const branchY = currentY + 30;
-                            ctx.moveTo(currentX, currentY);
-                            ctx.lineTo(branchX, branchY);
-                            ctx.moveTo(currentX, currentY);
-                        }
-                    }
-                    ctx.stroke();
-                }
-            }
-            ctx.shadowBlur = 0;
-        }
-
-        // Initialize radio module when DOM is ready
-        if (window.radioModule) {
-            window.radioModule.init();
-        }
-
-        // Initialize AdSense ad units
-        try {
-            (adsbygoogle = window.adsbygoogle || []).push({});
-            (adsbygoogle = window.adsbygoogle || []).push({});
-        } catch (e) {}
     </script>
 </body>
 </html>
