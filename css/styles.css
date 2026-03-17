@@ -1580,6 +1580,98 @@ body.hide-ui #help-toggle {
     border-radius: 12px;
 }
 
+/* ==================== SHARE TOAST ==================== */
+
+.share-toast {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-10px);
+    background: var(--glass-bg);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    z-index: 200;
+    pointer-events: none;
+    opacity: 0;
+    transition: all 0.2s ease;
+}
+
+.share-toast.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* ==================== SHARE & OVERLAY BUTTONS ==================== */
+
+.share-btn svg {
+    display: block;
+}
+
+.overlay-btn {
+    font-size: 9px !important;
+    letter-spacing: 0.5px;
+}
+
+/* ==================== SUPPORT BUTTON ==================== */
+
+.support-btn {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 50;
+    padding: 6px 14px;
+    background: rgba(15, 15, 25, 0.6);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-decoration: none;
+    opacity: 0.3;
+    transition: all 0.2s ease;
+    pointer-events: all;
+}
+
+.support-btn:hover {
+    opacity: 1;
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 12px var(--shadow);
+}
+
+body.hide-ui .support-btn {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* ==================== OVERLAY MODE ==================== */
+
+body.overlay-mode {
+    background: transparent !important;
+}
+
+body.overlay-mode #canvas-container {
+    background: transparent !important;
+}
+
+body.overlay-mode #visualizer-canvas {
+    background: transparent !important;
+}
+
+body.overlay-mode #ui-overlay,
+body.overlay-mode .support-btn,
+body.overlay-mode #ad-container {
+    display: none !important;
+}
+
 /* ==================== MOBILE RESPONSIVE ==================== */
 
 @media (max-width: 768px) {
@@ -1654,6 +1746,17 @@ body.hide-ui #help-toggle {
         right: 62px;
         width: 38px;
         height: 38px;
+    }
+
+    .support-btn {
+        bottom: 14px;
+        left: 14px;
+        font-size: 9px;
+        padding: 5px 10px;
+    }
+
+    .overlay-btn {
+        display: none;
     }
 
     input[type="range"]::-webkit-slider-thumb {

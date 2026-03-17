@@ -34,6 +34,14 @@ Real-time audio visualizer with internet radio streaming.
 - All radio state managed in `js/radio.js`, exposed via `window.radioModule`
 - Visualizer globals: `window.audioContext`, `window.analyser`, `window.dataArray`, `window.config`
 
+## Features
+- **Shareable Preset URLs**: URL query params (`?pattern=galaxy&color=rainbow&theme=neon&...`) to share visualizer configs. Share button in top bar copies current state URL to clipboard.
+- **OBS Overlay Mode**: `?overlay=1` URL param hides all UI, sets transparent background for use as OBS browser source. OBS button in top bar opens overlay in new tab.
+- **Open Graph / Social Share**: og:image, twitter:card meta tags for rich link previews. SVG source at `og-image.svg`, PNG needed at `og-image.png`.
+- **Ko-fi Support Button**: Fixed bottom-left pill badge linking to Ko-fi, hides with UI (H key).
+- **Keyboard Shortcuts Panel**: ? button (bottom-right) opens help overlay with all shortcuts listed.
+- **SEO**: Structured data (JSON-LD WebApplication), canonical URL, descriptive meta tags.
+
 ## Workflow
 - Always `git pull origin main` before starting work
 - Always commit and push when done

@@ -38,6 +38,127 @@
     // Make config global for modules
     window.config = config;
 
+    // --- Shareable Preset URLs ---
+    function applyURLParams() {
+        const params = new URLSearchParams(window.location.search);
+
+        // Check for overlay mode first
+        if (params.get('overlay') === '1') {
+            document.body.classList.add('overlay-mode');
+            document.body.classList.add('hide-ui');
+            // Make canvas transparent
+            const canvasEl = document.getElementById('visualizer-canvas');
+            if (canvasEl) canvasEl.style.background = 'transparent';
+            document.body.style.background = 'transparent';
+            const container = document.getElementById('canvas-container');
+            if (container) container.style.background = 'transparent';
+            // Hide ad container
+            const adContainer = document.getElementById('ad-container');
+            if (adContainer) adContainer.style.display = 'none';
+        }
+
+        // Apply visualizer params from URL
+        if (params.has('pattern')) {
+            const p = params.get('pattern');
+            if (window.AudioWavePatterns && window.AudioWavePatterns.patternList.includes(p)) {
+                config.pattern = p;
+            }
+        }
+        if (params.has('color')) {
+            const c = params.get('color');
+            if (c === 'rainbow' || c === 'single') config.colorMode = c;
+        }
+        if (params.has('hue')) {
+            const h = parseFloat(params.get('hue'));
+            if (!isNaN(h) && h >= 0 && h <= 360) config.hueShift = h;
+        }
+        if (params.has('amplitude')) {
+            const a = parseFloat(params.get('amplitude'));
+            if (!isNaN(a) && a >= 0.2 && a <= 2) config.amplitude = a;
+        }
+        if (params.has('glow')) {
+            const g = parseFloat(params.get('glow'));
+            if (!isNaN(g) && g >= 0 && g <= 50) config.glow = g;
+        }
+        if (params.has('speed')) {
+            const s = parseFloat(params.get('speed'));
+            if (!isNaN(s) && s >= 0.2 && s <= 3) config.speed = s;
+        }
+        if (params.has('smoothing')) {
+            const sm = parseFloat(params.get('smoothing'));
+            if (!isNaN(sm) && sm >= 0 && sm <= 0.99) config.smoothing = sm;
+        }
+        if (params.has('theme')) {
+            const t = params.get('theme');
+            // Will be applied after theme module init
+            window._urlTheme = t;
+        }
+
+        // Load saved preset slot from URL
+        if (params.has('saved')) {
+            const slot = params.get('saved');
+            const presets = JSON.parse(localStorage.getItem('audiowave-presets') || '{}');
+            if (presets[slot]) {
+                Object.assign(config, presets[slot]);
+            }
+        }
+    }
+
+    applyURLParams();
+
+    function buildShareURL() {
+        const base = window.location.origin + window.location.pathname;
+        const params = new URLSearchParams();
+        params.set('pattern', config.pattern);
+        params.set('color', config.colorMode);
+        params.set('hue', config.hueShift);
+        params.set('amplitude', config.amplitude);
+        params.set('glow', config.glow);
+        params.set('speed', config.speed);
+        params.set('smoothing', config.smoothing);
+        const themeMod = window.AudioWaveThemes;
+        if (themeMod) {
+            params.set('theme', themeMod.getCurrentTheme());
+        }
+        return base + '?' + params.toString();
+    }
+
+    function showToast(message) {
+        let toast = document.getElementById('share-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'share-toast';
+            toast.className = 'share-toast';
+            document.body.appendChild(toast);
+        }
+        toast.textContent = message;
+        toast.classList.add('visible');
+        clearTimeout(toast._timeout);
+        toast._timeout = setTimeout(() => toast.classList.remove('visible'), 2000);
+    }
+
+    // Share button
+    const shareBtn = document.getElementById('share-btn');
+    if (shareBtn) {
+        shareBtn.addEventListener('click', () => {
+            const url = buildShareURL();
+            navigator.clipboard.writeText(url).then(() => {
+                showToast('Copied!');
+            }).catch(() => {
+                showToast('Copy failed');
+            });
+        });
+    }
+
+    // Overlay mode button
+    const overlayBtn = document.getElementById('overlay-btn');
+    if (overlayBtn) {
+        overlayBtn.addEventListener('click', () => {
+            const url = buildShareURL() + '&overlay=1';
+            window.open(url, '_blank');
+        });
+    }
+
     // Browser support detection
     const browserSupport = {
         getDisplayMedia: !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia),
@@ -51,8 +172,9 @@
 
     // Canvas setup
     const canvas = document.getElementById('visualizer-canvas');
+    const isOverlay = new URLSearchParams(window.location.search).get('overlay') === '1';
     const ctx = canvas.getContext('2d', {
-        alpha: false,
+        alpha: isOverlay,
         desynchronized: true
     });
     let width, height;
@@ -109,6 +231,11 @@
 
         time += 0.016 * config.speed;
         hue = (hue + 0.5 * config.speed) % 360;
+
+        // In overlay mode, clear to transparent before drawing
+        if (isOverlay) {
+            ctx.clearRect(0, 0, width, height);
+        }
 
         // Update patterns module with current state
         patterns.update({
@@ -475,7 +602,13 @@
 
     // Initialize all modules
     if (window.radioModule) window.radioModule.init();
-    if (window.AudioWaveThemes) window.AudioWaveThemes.init();
+    if (window.AudioWaveThemes) {
+        window.AudioWaveThemes.init();
+        // Apply URL theme param if present
+        if (window._urlTheme && window.AudioWaveThemes.themes[window._urlTheme]) {
+            window.AudioWaveThemes.applyTheme(window._urlTheme);
+        }
+    }
     if (window.AudioWaveFavorites) window.AudioWaveFavorites.init();
     if (window.AudioWaveGestures) window.AudioWaveGestures.init();
     if (window.AudioWaveOnboarding) window.AudioWaveOnboarding.init();
@@ -490,7 +623,8 @@
     window.AudioWaveApp = {
         saveConfig,
         stopCapture,
-        config
+        config,
+        buildShareURL
     };
 
 })();

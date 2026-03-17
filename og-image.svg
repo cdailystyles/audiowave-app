@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0a0f"/>
+      <stop offset="100%" style="stop-color:#15151f"/>
+    </linearGradient>
+    <linearGradient id="rainbow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ff0000"/>
+      <stop offset="16%" style="stop-color:#ff8800"/>
+      <stop offset="33%" style="stop-color:#ffff00"/>
+      <stop offset="50%" style="stop-color:#00ff88"/>
+      <stop offset="66%" style="stop-color:#00ccff"/>
+      <stop offset="83%" style="stop-color:#8800ff"/>
+      <stop offset="100%" style="stop-color:#ff00ff"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <filter id="textGlow">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <!-- Spectrum bars -->
+  <g filter="url(#glow)" opacity="0.9">
+    <rect x="100" y="280" width="22" height="120" rx="4" fill="#ff0055" opacity="0.8"/>
+    <rect x="132" y="240" width="22" height="160" rx="4" fill="#ff2244" opacity="0.85"/>
+    <rect x="164" y="200" width="22" height="200" rx="4" fill="#ff4433" opacity="0.9"/>
+    <rect x="196" y="170" width="22" height="230" rx="4" fill="#ff6622" opacity="0.9"/>
+    <rect x="228" y="150" width="22" height="250" rx="4" fill="#ff8811" opacity="0.95"/>
+    <rect x="260" y="120" width="22" height="280" rx="4" fill="#ffaa00" opacity="1"/>
+    <rect x="292" y="100" width="22" height="300" rx="4" fill="#ffcc00" opacity="1"/>
+    <rect x="324" y="80" width="22" height="320" rx="4" fill="#ddee00" opacity="1"/>
+    <rect x="356" y="70" width="22" height="330" rx="4" fill="#88ff00" opacity="1"/>
+    <rect x="388" y="60" width="22" height="340" rx="4" fill="#44ff44" opacity="1"/>
+    <rect x="420" y="55" width="22" height="345" rx="4" fill="#00ff88" opacity="1"/>
+    <rect x="452" y="60" width="22" height="340" rx="4" fill="#00ffcc" opacity="1"/>
+    <rect x="484" y="70" width="22" height="330" rx="4" fill="#00eeff" opacity="1"/>
+    <rect x="516" y="85" width="22" height="315" rx="4" fill="#00ccff" opacity="1"/>
+    <rect x="548" y="105" width="22" height="295" rx="4" fill="#0099ff" opacity="0.95"/>
+    <rect x="580" y="130" width="22" height="270" rx="4" fill="#0066ff" opacity="0.9"/>
+    <rect x="612" y="160" width="22" height="240" rx="4" fill="#2244ff" opacity="0.9"/>
+    <rect x="644" y="190" width="22" height="210" rx="4" fill="#4422ff" opacity="0.85"/>
+    <rect x="676" y="220" width="22" height="180" rx="4" fill="#6600ff" opacity="0.8"/>
+    <rect x="708" y="245" width="22" height="155" rx="4" fill="#8800ff" opacity="0.75"/>
+    <rect x="740" y="265" width="22" height="135" rx="4" fill="#aa00ff" opacity="0.7"/>
+    <rect x="772" y="280" width="22" height="120" rx="4" fill="#cc00ff" opacity="0.65"/>
+    <rect x="804" y="295" width="22" height="105" rx="4" fill="#ff00ee" opacity="0.6"/>
+    <rect x="836" y="310" width="22" height="90" rx="4" fill="#ff00cc" opacity="0.55"/>
+  </g>
+  <!-- Title text -->
+  <text x="600" y="520" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="64" font-weight="700" fill="#00ffcc" filter="url(#textGlow)">AudioWave.app</text>
+  <text x="600" y="570" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="24" fill="#a0a0a8">Free Audio Visualizer &amp; Radio</text>
+</svg>
