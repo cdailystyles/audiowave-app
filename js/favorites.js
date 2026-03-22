@@ -38,11 +38,51 @@ window.AudioWaveFavorites = (function() {
         updateHeartIcons();
     }
 
+    let undoTimeout = null;
+    let pendingRemoval = null;
+
     function remove(url) {
+        const removed = favorites.find(f => f.url_resolved === url);
         favorites = favorites.filter(f => f.url_resolved !== url);
         save();
         render();
         updateHeartIcons();
+
+        // Show undo toast
+        if (removed) {
+            clearTimeout(undoTimeout);
+            pendingRemoval = removed;
+            showUndoToast(removed.name);
+        }
+    }
+
+    function showUndoToast(name) {
+        let toast = document.getElementById('fav-undo-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'fav-undo-toast';
+            toast.className = 'fav-undo-toast';
+            document.body.appendChild(toast);
+        }
+        toast.innerHTML = `Removed <strong>${escapeHtml(name)}</strong> <button class="undo-btn">Undo</button>`;
+        toast.classList.add('visible');
+
+        toast.querySelector('.undo-btn').addEventListener('click', () => {
+            if (pendingRemoval) {
+                favorites.push(pendingRemoval);
+                save();
+                render();
+                updateHeartIcons();
+                pendingRemoval = null;
+            }
+            toast.classList.remove('visible');
+            clearTimeout(undoTimeout);
+        });
+
+        undoTimeout = setTimeout(() => {
+            toast.classList.remove('visible');
+            pendingRemoval = null;
+        }, 5000);
     }
 
     function toggle(station) {
@@ -121,15 +161,9 @@ window.AudioWaveFavorites = (function() {
         });
     }
 
-    function escapeHtml(text) {
-        if (!text) return '';
-        return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-    }
-
-    function escapeAttr(text) {
-        if (!text) return '';
-        return text.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-    }
+    // Use shared utilities
+    const escapeHtml = window.AudioWaveUtils.escapeHtml;
+    const escapeAttr = window.AudioWaveUtils.escapeAttr;
 
     function init() {
         load();

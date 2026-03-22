@@ -13,14 +13,16 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://audiowave.app/">
     <meta property="og:title" content="AudioWave.app — Free Audio Visualizer & Radio">
-    <meta property="og:description" content="Real-time audio visualizer with 20+ patterns. Stream internet radio or visualize any browser tab. Free, no signup.">
+    <meta property="og:description" content="Real-time audio visualizer with 24 stunning patterns. Stream internet radio or visualize any browser tab. Free, no signup.">
     <meta property="og:image" content="https://audiowave.app/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
     <meta property="og:site_name" content="AudioWave.app">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="AudioWave.app — Free Audio Visualizer & Radio">
-    <meta name="twitter:description" content="Real-time audio visualizer with 20+ patterns. Stream internet radio or visualize any browser tab. Free, no signup.">
+    <meta name="twitter:description" content="Real-time audio visualizer with 24 stunning patterns. Stream internet radio or visualize any browser tab. Free, no signup.">
     <meta name="twitter:image" content="https://audiowave.app/og-image.png">
 
     <!-- Structured Data -->
@@ -164,7 +166,17 @@
                 <div class="station-list-section">
                     <div class="station-list-header">
                         <span id="station-list-title">Stations</span>
-                        <button id="refresh-stations" class="refresh-btn" aria-label="Refresh stations">&#x21BB;</button>
+                        <div class="station-list-actions">
+                            <div class="styled-select sort-select">
+                                <select id="station-sort" aria-label="Sort stations">
+                                    <option value="clickcount">Popular</option>
+                                    <option value="changetimestamp">Recent</option>
+                                    <option value="name">Name A-Z</option>
+                                    <option value="bitrate">Bitrate</option>
+                                </select>
+                            </div>
+                            <button id="refresh-stations" class="refresh-btn" aria-label="Refresh stations">&#x21BB;</button>
+                        </div>
                     </div>
                     <div id="station-list" class="station-list"></div>
                 </div>
@@ -288,6 +300,9 @@
                     <button class="theme-btn" data-theme="aurora">
                         <span class="theme-dot" style="background:#00ff88"></span>Aurora
                     </button>
+                    <button class="theme-btn" data-theme="highcontrast">
+                        <span class="theme-dot" style="background:linear-gradient(135deg,#ffff00,#00ffff)"></span>HiCon
+                    </button>
                 </div>
                 <div class="accent-picker-row">
                     <label for="accent-color">Custom</label>
@@ -307,6 +322,15 @@
 
             <div class="auto-cycle-row">
                 <button id="auto-cycle-btn" aria-label="Auto-cycle patterns">Auto Cycle</button>
+                <div class="styled-select cycle-speed-select">
+                    <select id="cycle-speed" aria-label="Auto-cycle interval">
+                        <option value="5000">5s</option>
+                        <option value="8000" selected>8s</option>
+                        <option value="15000">15s</option>
+                        <option value="30000">30s</option>
+                        <option value="60000">60s</option>
+                    </select>
+                </div>
             </div>
 
             <button class="hide-ui-btn" id="hide-ui" aria-label="Hide interface">Hide UI [H]</button>
@@ -356,6 +380,7 @@
                     <div class="shortcut"><kbd>M</kbd><span>Toggle microphone</span></div>
                     <div class="shortcut"><kbd>&larr;</kbd><span>Previous station</span></div>
                     <div class="shortcut"><kbd>&rarr;</kbd><span>Next station</span></div>
+                    <div class="shortcut"><kbd>T</kbd><span>Cycle themes</span></div>
                     <div class="shortcut"><kbd>1-9</kbd><span>Switch patterns</span></div>
                     <div class="shortcut"><kbd>?</kbd><span>Toggle this help</span></div>
                 </div>
@@ -386,6 +411,7 @@
     </div>
 
     <!-- Modules -->
+    <script src="js/utils.js"></script>
     <script src="js/patterns.js"></script>
     <script src="js/themes.js"></script>
     <script src="js/radio.js"></script>

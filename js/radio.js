@@ -101,6 +101,7 @@ const radioState = {
     stations: [],
     country: savedRadio.country || 'US',
     genre: savedRadio.genre || '',
+    sortOrder: savedRadio.sortOrder || 'clickcount',
     audioElement: null,
     sourceNode: null,
     currentStationIndex: -1
@@ -109,7 +110,7 @@ const radioState = {
 // Save radio preferences
 function saveRadioPrefs() {
     try {
-        localStorage.setItem('audiowave-radio', JSON.stringify({ country: radioState.country, genre: radioState.genre }));
+        localStorage.setItem('audiowave-radio', JSON.stringify({ country: radioState.country, genre: radioState.genre, sortOrder: radioState.sortOrder }));
     } catch (e) {}
 }
 
@@ -147,7 +148,7 @@ async function fetchStations() {
     }
 
     try {
-        let url = `${RADIO_API}/stations/search?limit=50&order=clickcount&reverse=true&hidebroken=true`;
+        let url = `${RADIO_API}/stations/search?limit=50&order=${radioState.sortOrder}&reverse=true&hidebroken=true`;
 
         if (radioState.country) {
             url += `&countrycode=${radioState.country}`;
@@ -255,32 +256,10 @@ function renderStationList() {
     });
 }
 
-// HTML escape helper
-function escapeHtml(text) {
-    if (!text) return '';
-    return text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
-
-function escapeAttr(text) {
-    if (!text) return '';
-    return text.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
-
-// URL validation helper
-function isValidStreamUrl(url) {
-    if (!url || typeof url !== 'string') return false;
-    try {
-        const parsed = new URL(url);
-        return ['http:', 'https:'].includes(parsed.protocol);
-    } catch {
-        return false;
-    }
-}
+// Use shared utilities from utils.js
+const escapeHtml = window.AudioWaveUtils.escapeHtml;
+const escapeAttr = window.AudioWaveUtils.escapeAttr;
+const isValidStreamUrl = window.AudioWaveUtils.isValidStreamUrl;
 
 // Play a station by index
 async function playStation(index) {
@@ -701,6 +680,31 @@ function initRadioEventListeners() {
     }
     if (npPrevBtn) npPrevBtn.addEventListener('click', prevStation);
     if (npNextBtn) npNextBtn.addEventListener('click', nextStation);
+
+    // Sort select
+    const sortSelect = document.getElementById('station-sort');
+    if (sortSelect) {
+        sortSelect.value = radioState.sortOrder;
+        sortSelect.addEventListener('change', async (e) => {
+            radioState.sortOrder = e.target.value;
+            saveRadioPrefs();
+            await fetchStations();
+        });
+    }
+
+    // Offline/online detection
+    window.addEventListener('offline', () => {
+        const statusText = document.getElementById('status-text');
+        if (statusText) statusText.textContent = 'No internet connection';
+        const radioPanel = document.getElementById('radio-panel');
+        if (radioPanel) radioPanel.classList.add('offline');
+    });
+    window.addEventListener('online', () => {
+        const statusText = document.getElementById('status-text');
+        if (statusText) statusText.textContent = 'Back online';
+        const radioPanel = document.getElementById('radio-panel');
+        if (radioPanel) radioPanel.classList.remove('offline');
+    });
 
     // Station search
     initStationSearch();

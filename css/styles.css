@@ -1810,17 +1810,128 @@ body.overlay-mode #ad-container {
     .color-mode-btn,
     .source-btn,
     .hide-ui-btn,
-    .theme-btn {
+    .theme-btn,
+    .preset-btn,
+    .radio-tab,
+    .np-btn,
+    #auto-cycle-btn {
         min-height: 44px;
         display: flex;
         align-items: center;
         justify-content: center;
     }
 
-    .station-heart {
-        width: 32px;
-        height: 32px;
+    .station-heart,
+    .fav-remove-btn {
+        width: 44px;
+        height: 44px;
     }
+
+    .station-item {
+        padding: 10px 12px;
+        min-height: 44px;
+    }
+
+    .radio-close,
+    .help-close,
+    .refresh-btn {
+        min-width: 44px;
+        min-height: 44px;
+    }
+}
+
+/* ==================== STATION LIST ACTIONS ==================== */
+
+.station-list-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sort-select {
+    min-width: 90px;
+}
+
+.sort-select select {
+    padding: 4px 24px 4px 8px;
+    font-size: 9px;
+}
+
+/* Auto-cycle speed select */
+.cycle-speed-select {
+    min-width: 60px;
+}
+
+.cycle-speed-select select {
+    padding: 5px 22px 5px 8px;
+    font-size: 9px;
+}
+
+.auto-cycle-row {
+    gap: 8px;
+    align-items: center;
+}
+
+/* ==================== OFFLINE STATE ==================== */
+
+.radio-panel.offline .station-search input,
+.radio-panel.offline .styled-select select,
+.radio-panel.offline .custom-url-input input,
+.radio-panel.offline .custom-url-input button,
+.radio-panel.offline .refresh-btn {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+/* ==================== FAVORITE UNDO TOAST ==================== */
+
+.fav-undo-toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background: var(--glass-bg);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 11px;
+    color: var(--text);
+    z-index: 200;
+    pointer-events: all;
+    opacity: 0;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.fav-undo-toast.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.fav-undo-toast strong {
+    color: var(--accent);
+}
+
+.undo-btn {
+    padding: 4px 12px;
+    background: var(--accent);
+    border: none;
+    border-radius: 6px;
+    color: var(--bg-dark);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.undo-btn:hover {
+    box-shadow: 0 0 12px var(--shadow);
 }
 
 /* Reduced motion accessibility support */

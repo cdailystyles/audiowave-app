@@ -9,6 +9,19 @@ window.AudioWavePatterns = (function() {
     let config, time, hue;
     let getColor;
 
+    // Performance mode: auto-detect low-end devices or user preference
+    let performanceMode = false;
+    try {
+        const savedPerf = localStorage.getItem('audiowave-performance');
+        if (savedPerf === '1') performanceMode = true;
+        else if (savedPerf === null && navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) {
+            performanceMode = true;
+        }
+    } catch (e) {}
+
+    // Heavy patterns that benefit from reduced quality
+    const heavyPatterns = new Set(['plasma', 'fractal', 'fireworks', 'lightning']);
+
     function init(refs) {
         ctx = refs.ctx;
         width = refs.width;
@@ -278,7 +291,7 @@ window.AudioWavePatterns = (function() {
         ctx.fillRect(0, 0, width, height);
         const avgFreq = dataArray.reduce((a, b) => a + b, 0) / bufferLength;
         const intensity = (avgFreq / 255) * config.amplitude;
-        const cellSize = 12;
+        const cellSize = performanceMode ? 20 : 12;
         const lightness = 50 + intensity * 30;
         const alpha = 0.3 + intensity * 0.5;
         for (let y = 0; y < height; y += cellSize) {
@@ -299,7 +312,8 @@ window.AudioWavePatterns = (function() {
         ctx.fillRect(0, 0, width, height);
         const centerX = width / 2, centerY = height / 2;
         ctx.shadowBlur = config.glow;
-        for (let iteration = 0; iteration < 5; iteration++) {
+        const iterations = performanceMode ? 3 : 5;
+        for (let iteration = 0; iteration < iterations; iteration++) {
             const scale = Math.pow(0.6, iteration);
             const rotation = time * (iteration + 1) * 0.2;
             for (let i = 0; i < bufferLength; i += 4) {
@@ -569,18 +583,20 @@ window.AudioWavePatterns = (function() {
         ctx.fillStyle = 'rgba(10, 10, 15, 0.1)';
         ctx.fillRect(0, 0, width, height);
         ctx.shadowBlur = config.glow;
-        for (let burst = 0; burst < 8; burst++) {
+        const burstCount = performanceMode ? 5 : 8;
+        for (let burst = 0; burst < burstCount; burst++) {
             const dataIndex = Math.floor((burst / 8) * bufferLength);
             const amp = (dataArray[dataIndex] / 255) * config.amplitude;
             if (amp > 0.3) {
-                const x = ((burst + 0.5) / 8) * width;
+                const x = ((burst + 0.5) / burstCount) * width;
                 const y = height * 0.3 + Math.sin(time + burst) * 50 + (1 - amp) * 100;
                 const color = getColor(burst * 30, 240);
                 ctx.fillStyle = color;
                 ctx.shadowColor = color;
                 const burstRadius = amp * 80 + 20;
-                for (let p = 0; p < 24; p++) {
-                    const pa = (p / 24) * Math.PI * 2;
+                const particleCount = performanceMode ? 14 : 24;
+                for (let p = 0; p < particleCount; p++) {
+                    const pa = (p / particleCount) * Math.PI * 2;
                     const dist = burstRadius * (0.5 + amp * 0.5);
                     const px = x + Math.cos(pa) * dist;
                     const py = y + Math.sin(pa) * dist;
@@ -679,6 +695,11 @@ window.AudioWavePatterns = (function() {
         patterns,
         patternNames,
         patternList,
+        isPerformanceMode: () => performanceMode,
+        setPerformanceMode(enabled) {
+            performanceMode = enabled;
+            try { localStorage.setItem('audiowave-performance', enabled ? '1' : '0'); } catch (e) {}
+        },
         draw(name) {
             const fn = patterns[name];
             if (fn) fn();

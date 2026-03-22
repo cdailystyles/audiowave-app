@@ -18,10 +18,18 @@
         hueShift: 0
     };
 
-    // Restore saved settings
+    // Restore saved settings with validation
     try {
         const saved = JSON.parse(localStorage.getItem('audiowave-config'));
-        if (saved) Object.assign(config, saved);
+        if (saved && typeof saved === 'object') {
+            if (typeof saved.pattern === 'string') config.pattern = saved.pattern;
+            if (typeof saved.amplitude === 'number' && saved.amplitude >= 0.2 && saved.amplitude <= 2) config.amplitude = saved.amplitude;
+            if (typeof saved.glow === 'number' && saved.glow >= 0 && saved.glow <= 50) config.glow = saved.glow;
+            if (typeof saved.smoothing === 'number' && saved.smoothing >= 0 && saved.smoothing <= 0.99) config.smoothing = saved.smoothing;
+            if (typeof saved.speed === 'number' && saved.speed >= 0.2 && saved.speed <= 3) config.speed = saved.speed;
+            if (saved.colorMode === 'rainbow' || saved.colorMode === 'single') config.colorMode = saved.colorMode;
+            if (typeof saved.hueShift === 'number' && saved.hueShift >= 0 && saved.hueShift <= 360) config.hueShift = saved.hueShift;
+        }
     } catch (e) {}
 
     // Auto-save settings on change (debounced)
@@ -31,7 +39,11 @@
         saveTimeout = setTimeout(() => {
             try {
                 localStorage.setItem('audiowave-config', JSON.stringify(config));
-            } catch (e) {}
+            } catch (e) {
+                if (e.name === 'QuotaExceededError') {
+                    console.warn('localStorage quota exceeded');
+                }
+            }
         }, 500);
     }
 
@@ -170,6 +182,22 @@
     let mediaStream = null;
     window.animationId = null;
 
+    // Shared audio graph cleanup
+    function cleanupAudioGraph() {
+        if (window.analyser) {
+            try { window.analyser.disconnect(); } catch (e) {}
+        }
+        if (window.audioContext) {
+            // Don't close context, just disconnect nodes
+        }
+        window.analyser = null;
+        window.dataArray = null;
+        window.bufferLength = null;
+        analyser = null;
+        dataArray = null;
+        bufferLength = null;
+    }
+
     // Canvas setup
     const canvas = document.getElementById('visualizer-canvas');
     const isOverlay = new URLSearchParams(window.location.search).get('overlay') === '1';
@@ -225,12 +253,17 @@
         if (window.dataArray) dataArray = window.dataArray;
         if (window.bufferLength) bufferLength = window.bufferLength;
 
-        if (!analyser || !dataArray) return;
-
-        analyser.getByteFrequencyData(dataArray);
-
         time += 0.016 * config.speed;
         hue = (hue + 0.5 * config.speed) % 360;
+
+        if (!analyser || !dataArray) {
+            // Idle animation - gentle gradient pulse while waiting for audio
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.05)';
+            ctx.fillRect(0, 0, width, height);
+            return;
+        }
+
+        analyser.getByteFrequencyData(dataArray);
 
         // In overlay mode, clear to transparent before drawing
         if (isOverlay) {
@@ -367,10 +400,8 @@
             mediaStream = null;
         }
 
-        if (audioContext && !window.radioModule?.radioState?.isPlaying) {
-            if (analyser) {
-                try { analyser.disconnect(); } catch (e) {}
-            }
+        if (!window.radioModule?.radioState?.isPlaying) {
+            cleanupAudioGraph();
         }
 
         if (captureBtn) {
@@ -506,18 +537,40 @@
     });
 
     // Help
-    helpToggle.addEventListener('click', () => {
+    function openHelp() {
         helpOverlay.classList.add('visible');
         helpOverlay.setAttribute('aria-hidden', 'false');
-    });
-    helpClose.addEventListener('click', () => {
+        // Focus the close button
+        helpClose.focus();
+    }
+    function closeHelp() {
         helpOverlay.classList.remove('visible');
         helpOverlay.setAttribute('aria-hidden', 'true');
-    });
+        helpToggle.focus();
+    }
+    helpToggle.addEventListener('click', openHelp);
+    helpClose.addEventListener('click', closeHelp);
     helpOverlay.addEventListener('click', (e) => {
-        if (e.target === helpOverlay) {
-            helpOverlay.classList.remove('visible');
-            helpOverlay.setAttribute('aria-hidden', 'true');
+        if (e.target === helpOverlay) closeHelp();
+    });
+
+    // Focus trap for help overlay
+    helpOverlay.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeHelp();
+            return;
+        }
+        if (e.key !== 'Tab') return;
+        const focusable = helpOverlay.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
         }
     });
 
@@ -532,7 +585,23 @@
 
     // Auto-cycle mode
     let autoCycleInterval = null;
+    let autoCycleDuration = 8000;
     const autoCycleBtn = document.getElementById('auto-cycle-btn');
+    const cycleSpeedSelect = document.getElementById('cycle-speed');
+
+    function startAutoCycle() {
+        clearInterval(autoCycleInterval);
+        autoCycleBtn.classList.add('active');
+        autoCycleInterval = setInterval(() => {
+            const list = patterns.patternList;
+            const currentIndex = list.indexOf(config.pattern);
+            const nextIndex = (currentIndex + 1) % list.length;
+            config.pattern = list[nextIndex];
+            patternBtns.forEach(b => b.classList.toggle('active', b.dataset.pattern === list[nextIndex]));
+            saveConfig();
+        }, autoCycleDuration);
+    }
+
     if (autoCycleBtn) {
         autoCycleBtn.addEventListener('click', () => {
             if (autoCycleInterval) {
@@ -540,16 +609,16 @@
                 autoCycleInterval = null;
                 autoCycleBtn.classList.remove('active');
             } else {
-                autoCycleBtn.classList.add('active');
-                autoCycleInterval = setInterval(() => {
-                    const list = patterns.patternList;
-                    const currentIndex = list.indexOf(config.pattern);
-                    const nextIndex = (currentIndex + 1) % list.length;
-                    config.pattern = list[nextIndex];
-                    patternBtns.forEach(b => b.classList.toggle('active', b.dataset.pattern === list[nextIndex]));
-                    saveConfig();
-                }, 8000);
+                startAutoCycle();
             }
+        });
+    }
+
+    if (cycleSpeedSelect) {
+        cycleSpeedSelect.addEventListener('change', (e) => {
+            autoCycleDuration = parseInt(e.target.value);
+            // Restart cycle if active
+            if (autoCycleInterval) startAutoCycle();
         });
     }
 
@@ -574,11 +643,22 @@
             case 'arrowright':
                 window.radioModule?.nextStation();
                 break;
+            case 't':
+                if (window.AudioWaveThemes) window.AudioWaveThemes.cycleTheme();
+                break;
             case 'm':
                 if (micBtn) micBtn.click();
                 break;
+            case 'escape':
+                if (helpOverlay.classList.contains('visible')) closeHelp();
+                else if (radioPanel.classList.contains('visible')) {
+                    radioPanel.classList.remove('visible');
+                    radioBtn.classList.remove('active');
+                }
+                break;
             case '?':
-                helpOverlay.classList.toggle('visible');
+                if (helpOverlay.classList.contains('visible')) closeHelp();
+                else openHelp();
                 break;
             default:
                 if (e.key >= '1' && e.key <= '9') {
@@ -619,10 +699,16 @@
         (adsbygoogle = window.adsbygoogle || []).push({});
     } catch (e) {}
 
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+
     // Expose for other modules
     window.AudioWaveApp = {
         saveConfig,
         stopCapture,
+        cleanupAudioGraph,
         config,
         buildShareURL
     };

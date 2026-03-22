@@ -51,6 +51,15 @@ window.AudioWaveThemes = (function() {
             bgPanel: 'rgba(10, 20, 30, 0.85)',
             text: '#d8f0e8',
             textDim: '#88b0a0'
+        },
+        highcontrast: {
+            name: 'High Contrast',
+            accent: '#ffff00',
+            accentDim: '#cccc00',
+            bgDark: '#000000',
+            bgPanel: 'rgba(0, 0, 0, 0.92)',
+            text: '#ffffff',
+            textDim: '#cccccc'
         }
     };
 
@@ -151,10 +160,22 @@ window.AudioWaveThemes = (function() {
         }
     }
 
+    function cycleTheme() {
+        const themeNames = Object.keys(themes);
+        const currentIndex = themeNames.indexOf(currentTheme);
+        const nextIndex = (currentIndex + 1) % themeNames.length;
+        customAccent = null;
+        const nextTheme = themeNames[nextIndex];
+        const accentInput = document.getElementById('accent-color');
+        if (accentInput) accentInput.value = themes[nextTheme].accent;
+        applyTheme(nextTheme);
+    }
+
     return {
         init,
         themes,
         applyTheme,
+        cycleTheme,
         getCurrentTheme: () => currentTheme,
         getCustomAccent: () => customAccent
     };
