@@ -58,39 +58,22 @@ const COUNTRIES = [
     { code: 'TR', name: 'Turkey' }
 ];
 
-// Genre list
+// Broad genre categories — each maps to multiple Radio Browser tags for wider results
 const GENRES = [
-    { value: '', name: 'All Genres' },
-    { value: 'pop', name: 'Pop' },
-    { value: 'rock', name: 'Rock' },
-    { value: 'hip hop', name: 'Hip Hop' },
-    { value: 'electronic', name: 'Electronic' },
-    { value: 'dance', name: 'Dance' },
-    { value: 'house', name: 'House' },
-    { value: 'techno', name: 'Techno' },
-    { value: 'jazz', name: 'Jazz' },
-    { value: 'classical', name: 'Classical' },
-    { value: 'country', name: 'Country' },
-    { value: 'rnb', name: 'R&B / Soul' },
-    { value: 'reggae', name: 'Reggae' },
-    { value: 'latin', name: 'Latin' },
-    { value: 'metal', name: 'Metal' },
-    { value: 'punk', name: 'Punk' },
-    { value: 'indie', name: 'Indie' },
-    { value: 'alternative', name: 'Alternative' },
-    { value: 'ambient', name: 'Ambient' },
-    { value: 'chillout', name: 'Chillout' },
-    { value: 'lounge', name: 'Lounge' },
-    { value: '80s', name: '80s' },
-    { value: '90s', name: '90s' },
-    { value: '70s', name: '70s' },
-    { value: 'oldies', name: 'Oldies' },
-    { value: 'blues', name: 'Blues' },
-    { value: 'folk', name: 'Folk' },
-    { value: 'world', name: 'World' },
-    { value: 'news', name: 'News' },
-    { value: 'talk', name: 'Talk' },
-    { value: 'sports', name: 'Sports' }
+    { value: '', name: 'All Genres', tags: [] },
+    { value: 'pop', name: 'Pop & Top 40', tags: ['pop', 'top 40', 'hits', 'charts'] },
+    { value: 'rock', name: 'Rock', tags: ['rock', 'classic rock', 'alternative', 'indie', 'punk', 'grunge'] },
+    { value: 'hiphop', name: 'Hip Hop & R&B', tags: ['hip hop', 'hip-hop', 'hiphop', 'rap', 'rnb', 'r&b', 'soul', 'urban'] },
+    { value: 'electronic', name: 'Electronic & Dance', tags: ['electronic', 'dance', 'edm', 'house', 'techno', 'trance', 'dubstep', 'drum and bass'] },
+    { value: 'jazz', name: 'Jazz & Blues', tags: ['jazz', 'blues', 'smooth jazz', 'swing'] },
+    { value: 'classical', name: 'Classical', tags: ['classical', 'symphony', 'opera', 'orchestra'] },
+    { value: 'country', name: 'Country & Folk', tags: ['country', 'folk', 'bluegrass', 'americana'] },
+    { value: 'latin', name: 'Latin & Reggaeton', tags: ['latin', 'reggaeton', 'salsa', 'bachata', 'cumbia', 'tropical'] },
+    { value: 'chill', name: 'Chill & Lounge', tags: ['ambient', 'chillout', 'lounge', 'chill', 'downtempo', 'relaxation'] },
+    { value: 'retro', name: 'Retro & Oldies', tags: ['80s', '90s', '70s', '60s', 'oldies', 'retro', 'disco'] },
+    { value: 'metal', name: 'Metal & Punk', tags: ['metal', 'heavy metal', 'punk', 'hardcore', 'death metal'] },
+    { value: 'reggae', name: 'Reggae & World', tags: ['reggae', 'world', 'afrobeats', 'ska', 'dub', 'african'] },
+    { value: 'news', name: 'News & Talk', tags: ['news', 'talk', 'sports', 'talk radio', 'public radio'] }
 ];
 
 // Radio state (restore saved country/genre)
@@ -136,7 +119,35 @@ function initGenreDropdown() {
     ).join('');
 }
 
-// Fetch stations based on current filters
+// Fetch a single tag query from the API
+async function fetchTagQuery(tag, countryCode, sortOrder, httpsOnly) {
+    let url = `${RADIO_API}/stations/search?limit=50&order=${sortOrder}&reverse=true&hidebroken=true`;
+    if (httpsOnly) url += '&is_https=true';
+    if (countryCode) url += `&countrycode=${countryCode}`;
+    if (tag) url += `&tag=${encodeURIComponent(tag)}`;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) throw new Error(`Server error: ${response.status}`);
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+}
+
+// Deduplicate stations by resolved URL
+function dedupeStations(stations) {
+    const seen = new Set();
+    return stations.filter(s => {
+        if (!s.url_resolved || seen.has(s.url_resolved)) return false;
+        seen.add(s.url_resolved);
+        return true;
+    });
+}
+
+// Fetch stations based on current filters — searches multiple tags in parallel
 async function fetchStations() {
     const stationList = document.getElementById('station-list');
     const refreshBtn = document.getElementById('refresh-stations');
@@ -148,44 +159,54 @@ async function fetchStations() {
     }
 
     try {
-        let url = `${RADIO_API}/stations/search?limit=80&order=${radioState.sortOrder}&reverse=true&hidebroken=true&has_extended_info=true&is_https=true`;
+        const genre = GENRES.find(g => g.value === radioState.genre);
+        const tags = genre?.tags || [];
 
-        if (radioState.country) {
-            url += `&countrycode=${radioState.country}`;
-        }
-        if (radioState.genre) {
-            url += `&tag=${encodeURIComponent(radioState.genre)}`;
-        }
+        let allStations = [];
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-        const response = await fetch(url, { signal: controller.signal });
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-            throw new Error(`Server error: ${response.status}`);
-        }
-
-        const stations = await response.json();
-
-        if (!Array.isArray(stations)) {
-            throw new Error('Invalid response from server');
+        if (tags.length === 0) {
+            // "All Genres" — single request, no tag filter
+            allStations = await fetchTagQuery('', radioState.country, radioState.sortOrder, true);
+        } else {
+            // Search all tag variations in parallel (max 4 concurrent to be polite)
+            const batches = [];
+            for (let i = 0; i < tags.length; i += 4) {
+                batches.push(tags.slice(i, i + 4));
+            }
+            for (const batch of batches) {
+                const results = await Promise.all(
+                    batch.map(tag => fetchTagQuery(tag, radioState.country, radioState.sortOrder, true).catch(() => []))
+                );
+                allStations.push(...results.flat());
+            }
         }
 
-        radioState.stations = stations
-            .filter(s => s.url_resolved && !failedUrls.has(s.url_resolved))
-            .sort((a, b) => (b.clickcount || 0) - (a.clickcount || 0))
-            .slice(0, 30);
+        // Dedupe and sort by popularity
+        let stations = dedupeStations(allStations)
+            .filter(s => !failedUrls.has(s.url_resolved))
+            .sort((a, b) => (b.clickcount || 0) - (a.clickcount || 0));
+
+        // Fallback: if too few HTTPS results, retry without HTTPS restriction
+        if (stations.length < 5 && tags.length > 0) {
+            const fallbackTags = tags.slice(0, 3); // limit fallback queries
+            const fallbackResults = await Promise.all(
+                fallbackTags.map(tag => fetchTagQuery(tag, radioState.country, radioState.sortOrder, false).catch(() => []))
+            );
+            const combined = [...stations, ...fallbackResults.flat()];
+            stations = dedupeStations(combined)
+                .filter(s => !failedUrls.has(s.url_resolved))
+                .sort((a, b) => (b.clickcount || 0) - (a.clickcount || 0));
+        }
+
+        radioState.stations = stations.slice(0, 30);
         radioState.currentStationIndex = -1;
 
         // Update title
         if (stationListTitle) {
             const country = COUNTRIES.find(c => c.code === radioState.country);
             let title = country ? country.name : 'Stations';
-            if (radioState.genre) {
-                const genre = GENRES.find(g => g.value === radioState.genre);
-                title += ` - ${genre ? genre.name : radioState.genre}`;
+            if (genre && genre.value) {
+                title += ` — ${genre.name}`;
             }
             stationListTitle.textContent = title || 'Stations';
         }
