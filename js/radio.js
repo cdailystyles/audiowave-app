@@ -148,7 +148,7 @@ async function fetchStations() {
     }
 
     try {
-        let url = `${RADIO_API}/stations/search?limit=50&order=${radioState.sortOrder}&reverse=true&hidebroken=true`;
+        let url = `${RADIO_API}/stations/search?limit=80&order=${radioState.sortOrder}&reverse=true&hidebroken=true&has_extended_info=true&is_https=true`;
 
         if (radioState.country) {
             url += `&countrycode=${radioState.country}`;
@@ -173,7 +173,10 @@ async function fetchStations() {
             throw new Error('Invalid response from server');
         }
 
-        radioState.stations = stations.filter(s => s.url_resolved).slice(0, 30);
+        radioState.stations = stations
+            .filter(s => s.url_resolved && !failedUrls.has(s.url_resolved))
+            .sort((a, b) => (b.clickcount || 0) - (a.clickcount || 0))
+            .slice(0, 30);
         radioState.currentStationIndex = -1;
 
         // Update title
@@ -280,11 +283,48 @@ async function playStation(index) {
     await playStreamUrl(station.url_resolved);
 }
 
+// Track failed stations to avoid retrying them in this session
+const failedUrls = new Set();
+
+// Auto-skip to next working station on failure
+function autoSkipToNext(reason) {
+    const statusText = document.getElementById('status-text');
+    if (statusText) statusText.textContent = reason + ' — skipping...';
+
+    // Mark current URL as failed
+    if (radioState.currentStation?.url_resolved) {
+        failedUrls.add(radioState.currentStation.url_resolved);
+    }
+
+    // Find next non-failed station
+    if (radioState.stations.length > 1) {
+        let attempts = 0;
+        let idx = radioState.currentStationIndex;
+        while (attempts < radioState.stations.length) {
+            idx = (idx + 1) % radioState.stations.length;
+            if (!failedUrls.has(radioState.stations[idx].url_resolved)) {
+                setTimeout(() => playStation(idx), 300);
+                return;
+            }
+            attempts++;
+        }
+    }
+    // All stations failed
+    if (statusText) statusText.textContent = 'No working stations found — try different filters';
+    hideNowPlaying();
+}
+
 // Play a stream URL
 async function playStreamUrl(url) {
     // Stop mic if active
     if (window.AudioWaveMic?.isActive()) {
         window.AudioWaveMic.stop();
+    }
+
+    // Clear any previous loading timeout
+    if (radioState._loadingTimeout) {
+        clearTimeout(radioState._loadingTimeout);
+        radioState._loadingTimeout = null;
     }
 
     // Disconnect previous source if exists
@@ -295,20 +335,25 @@ async function playStreamUrl(url) {
         radioState.sourceNode = null;
     }
 
-    // Stop previous audio
+    // Stop previous audio and remove listeners
     if (radioState.audioElement) {
         radioState.audioElement.pause();
-        radioState.audioElement.src = '';
+        radioState.audioElement.removeAttribute('src');
+        radioState.audioElement.load();
         radioState.audioElement = null;
     }
 
+    const isCustom = !radioState.currentStation || radioState.currentStation.name === 'Custom Stream';
+
     try {
         // Create audio element
-        radioState.audioElement = new Audio();
-        radioState.audioElement.crossOrigin = 'anonymous';
+        const audio = new Audio();
+        audio.crossOrigin = 'anonymous';
+        audio.preload = 'auto';
+        radioState.audioElement = audio;
 
         const volumeSlider = document.getElementById('radio-volume');
-        radioState.audioElement.volume = volumeSlider ? parseFloat(volumeSlider.value) : 0.7;
+        audio.volume = volumeSlider ? parseFloat(volumeSlider.value) : 0.7;
 
         // Set up audio context and analyser
         if (!window.audioContext) {
@@ -320,10 +365,39 @@ async function playStreamUrl(url) {
             await window.audioContext.resume();
         }
 
-        radioState.audioElement.src = url;
+        // Update UI to show loading state
+        const statusText = document.getElementById('status-text');
+        const statusIndicator = document.getElementById('status-indicator');
+        const stationLabel = radioState.currentStation?.name || 'Custom Stream';
 
-        // Connect to analyser immediately
-        radioState.sourceNode = window.audioContext.createMediaElementSource(radioState.audioElement);
+        if (statusText) statusText.textContent = 'Connecting: ' + stationLabel;
+        if (statusIndicator) statusIndicator.classList.add('active');
+
+        // Set up error/stall handlers BEFORE setting src
+        audio.addEventListener('error', () => {
+            if (audio !== radioState.audioElement) return; // stale element
+            console.warn('Stream error for:', stationLabel);
+            radioState.isPlaying = false;
+            updatePlayButton(false);
+            if (isCustom) {
+                if (statusText) statusText.textContent = 'Stream failed — check URL';
+                if (statusIndicator) statusIndicator.classList.remove('active');
+                hideNowPlaying();
+            } else {
+                autoSkipToNext('Stream error');
+            }
+        });
+
+        audio.addEventListener('stalled', () => {
+            if (audio !== radioState.audioElement) return;
+            if (statusText) statusText.textContent = 'Buffering: ' + stationLabel;
+        });
+
+        // Set src and start loading
+        audio.src = url;
+
+        // Connect to analyser
+        radioState.sourceNode = window.audioContext.createMediaElementSource(audio);
 
         if (!window.analyser) {
             window.analyser = window.audioContext.createAnalyser();
@@ -339,29 +413,45 @@ async function playStreamUrl(url) {
         window.bufferLength = window.analyser.frequencyBinCount;
         window.dataArray = new Uint8Array(window.bufferLength);
 
-        // Update UI to show loading state
-        const statusText = document.getElementById('status-text');
-        const statusIndicator = document.getElementById('status-indicator');
-
-        if (statusText) statusText.textContent = 'Loading: ' + (radioState.currentStation?.name || 'Custom Stream');
-        if (statusIndicator) statusIndicator.classList.add('active');
+        // Loading timeout — if no audio plays within 8s, skip
+        radioState._loadingTimeout = setTimeout(() => {
+            if (audio !== radioState.audioElement) return;
+            if (!radioState.isPlaying) {
+                console.warn('Loading timeout for:', stationLabel);
+                audio.pause();
+                audio.removeAttribute('src');
+                if (isCustom) {
+                    if (statusText) statusText.textContent = 'Timed out — stream not responding';
+                    if (statusIndicator) statusIndicator.classList.remove('active');
+                    hideNowPlaying();
+                } else {
+                    autoSkipToNext('Timed out');
+                }
+            }
+        }, 8000);
 
         // Start playing
-        radioState.audioElement.play().then(() => {
+        audio.play().then(() => {
+            if (audio !== radioState.audioElement) return;
+            clearTimeout(radioState._loadingTimeout);
             radioState.isPlaying = true;
             updatePlayButton(true);
-            const name = radioState.currentStation?.name || 'Custom Stream';
-            if (statusText) statusText.textContent = 'Playing: ' + name;
+            if (statusText) statusText.textContent = 'Playing: ' + stationLabel;
 
             // Update now playing bar
-            updateNowPlaying(name, radioState.currentStation?.tags || '');
+            updateNowPlaying(stationLabel, radioState.currentStation?.tags || '');
         }).catch(error => {
+            if (audio !== radioState.audioElement) return;
             console.error('Playback failed:', error);
             radioState.isPlaying = false;
             updatePlayButton(false);
-            if (statusIndicator) statusIndicator.classList.remove('active');
-            if (statusText) statusText.textContent = 'Playback failed - try another station';
-            hideNowPlaying();
+            if (isCustom) {
+                if (statusIndicator) statusIndicator.classList.remove('active');
+                if (statusText) statusText.textContent = 'Playback failed — check URL';
+                hideNowPlaying();
+            } else {
+                autoSkipToNext('Playback failed');
+            }
         });
 
         // Start visualization if available
@@ -376,8 +466,12 @@ async function playStreamUrl(url) {
         const statusText = document.getElementById('status-text');
         const statusIndicator = document.getElementById('status-indicator');
         if (statusIndicator) statusIndicator.classList.remove('active');
-        if (statusText) statusText.textContent = 'Failed to play stream';
-        hideNowPlaying();
+        if (isCustom) {
+            if (statusText) statusText.textContent = 'Failed to play stream';
+            hideNowPlaying();
+        } else {
+            autoSkipToNext('Connection failed');
+        }
     }
 }
 
@@ -404,6 +498,11 @@ function hideNowPlaying() {
 
 // Stop radio playback
 function stopRadio() {
+    if (radioState._loadingTimeout) {
+        clearTimeout(radioState._loadingTimeout);
+        radioState._loadingTimeout = null;
+    }
+
     if (radioState.sourceNode) {
         try {
             radioState.sourceNode.disconnect();
@@ -413,7 +512,8 @@ function stopRadio() {
 
     if (radioState.audioElement) {
         radioState.audioElement.pause();
-        radioState.audioElement.src = '';
+        radioState.audioElement.removeAttribute('src');
+        radioState.audioElement.load();
         radioState.audioElement = null;
     }
 
@@ -499,7 +599,7 @@ async function searchStations(query) {
     stationList.innerHTML = '<div class="loading-message">Searching...</div>';
 
     try {
-        const url = `${RADIO_API}/stations/search?name=${encodeURIComponent(query)}&limit=30&order=clickcount&reverse=true&hidebroken=true`;
+        const url = `${RADIO_API}/stations/search?name=${encodeURIComponent(query)}&limit=50&order=clickcount&reverse=true&hidebroken=true&is_https=true`;
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
 
@@ -511,7 +611,10 @@ async function searchStations(query) {
         const stations = await response.json();
         if (!Array.isArray(stations)) throw new Error('Invalid response');
 
-        radioState.stations = stations.filter(s => s.url_resolved).slice(0, 30);
+        radioState.stations = stations
+            .filter(s => s.url_resolved && !failedUrls.has(s.url_resolved))
+            .sort((a, b) => (b.clickcount || 0) - (a.clickcount || 0))
+            .slice(0, 30);
         radioState.currentStationIndex = -1;
         renderStationList();
     } catch (error) {
